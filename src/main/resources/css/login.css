@@ -1,0 +1,54 @@
+/* BACKGROUND */
+.background-pane {
+    -fx-background-image: url("/images/SmvduBG.png");
+    -fx-background-size: cover;
+    -fx-background-position: center;
+}
+
+/* CARD */
+.glass-card {
+    -fx-background-color: rgba(255,255,255,0.94);
+    -fx-background-radius: 14;
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.25), 20, 0, 0, 8);
+}
+
+/* TEXT */
+.title {
+    -fx-font-size: 17px;
+    -fx-font-weight: bold;
+}
+
+.field-label {
+    -fx-font-size: 12px;
+}
+
+/* INPUT BOXES – fixed height so they don’t stretch */
+.input {
+    -fx-pref-height: 34px;
+    -fx-background-radius: 8;
+    -fx-border-radius: 8;
+    -fx-border-color: #bbb;
+    -fx-padding: 6 10;
+}
+
+.input:focused {
+    -fx-border-color: #2563eb;
+}
+
+/* BUTTON */
+.login-btn {
+    -fx-background-color: #2563eb;
+    -fx-text-fill: white;
+    -fx-font-weight: bold;
+    -fx-background-radius: 8;
+    -fx-pref-height: 36px;
+}
+
+.login-btn:hover {
+    -fx-background-color: #1d4ed8;
+}
+
+/* ERROR */
+.error {
+    -fx-text-fill: #dc2626;
+}

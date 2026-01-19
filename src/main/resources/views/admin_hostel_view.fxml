@@ -3,93 +3,126 @@
 <?import javafx.geometry.*?>
 <?import javafx.scene.control.*?>
 <?import javafx.scene.layout.*?>
+<?import javafx.scene.image.*?>
 
-<BorderPane xmlns="http://javafx.com/javafx" xmlns:fx="http://javafx.com/fxml"
+<BorderPane xmlns="http://javafx.com/javafx"
+            xmlns:fx="http://javafx.com/fxml"
             fx:controller="com.smvdu.mess.controllers.AdminHostelViewController"
-            style="-fx-background-color: #f5f5f5;">
-    
-    <!-- Header -->
+            styleClass="dashboard-bg">
+
+    <!-- ===== HEADER (MATCHED STYLE) ===== -->
     <top>
-        <VBox>
-            <HBox style="-fx-background-color: #1e3a5f; -fx-padding: 15 30;" 
-                  alignment="CENTER_LEFT" spacing="20">
-                <Button text="← Back" onAction="#goBack"
-                        style="-fx-background-color: transparent; -fx-text-fill: white; 
-                               -fx-font-size: 14px; -fx-cursor: hand;"/>
-                <VBox>
-                    <Label fx:id="hostelNameLabel" text="Hostel Name" 
-                           style="-fx-text-fill: white; -fx-font-size: 20px; -fx-font-weight: bold;"/>
-                    <Label fx:id="messNameLabel" text="Mess Name" 
-                           style="-fx-text-fill: #b3d9ff; -fx-font-size: 12px;"/>
-                </VBox>
-                <Region HBox.hgrow="ALWAYS"/>
-                <Label text="📊 View Only Mode" 
-                       style="-fx-text-fill: #FFD700; -fx-font-size: 13px; -fx-font-weight: bold;"/>
-            </HBox>
-        </VBox>
+        <HBox styleClass="app-header"
+              alignment="CENTER_LEFT"
+              spacing="14">
+
+            <padding>
+                <Insets top="10" right="22" bottom="10" left="20"/>
+            </padding>
+
+            <!-- Back Button (kept from your logic) -->
+            <Button text="← Back"
+                    onAction="#goBack"
+                    styleClass="back-button"/>
+
+            <!-- Logo -->
+            <ImageView fitWidth="48" preserveRatio="true">
+                <image>
+                    <Image url="@/images/smvdu.png"/>
+                </image>
+            </ImageView>
+
+            <!-- Dynamic Hostel Info -->
+            <VBox spacing="2">
+                <Label fx:id="hostelNameLabel"
+                       styleClass="header-title"/>
+                <Label fx:id="messNameLabel"
+                       styleClass="header-subtitle"/>
+            </VBox>
+
+            <Region HBox.hgrow="ALWAYS"/>
+
+            <!-- Mode Badge -->
+            <Label text="View Only Mode"
+                   style="-fx-text-fill: #b8860b;
+                          -fx-font-size: 13px;
+                          -fx-font-weight: bold;"/>
+        </HBox>
     </top>
-    
-    <!-- Content -->
+
+    <!-- ===== CONTENT (UNCHANGED LOGIC) ===== -->
     <center>
         <VBox spacing="20" style="-fx-padding: 30;">
-            
+
             <!-- Statistics Cards -->
             <HBox spacing="20" alignment="CENTER">
-                <VBox alignment="CENTER" spacing="8" 
-                      style="-fx-background-color: white; -fx-padding: 20; 
+
+                <VBox alignment="CENTER" spacing="8"
+                      style="-fx-background-color: white; -fx-padding: 20;
                              -fx-background-radius: 8; -fx-pref-width: 180;
                              -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.1), 8, 0, 0, 2);">
-                    <Label text="Total Students" style="-fx-font-size: 12px; -fx-text-fill: #666;"/>
-                    <Label fx:id="totalStudentsLabel" text="0" 
+                    <Label text="Total Students"
+                           style="-fx-font-size: 12px; -fx-text-fill: #666;"/>
+                    <Label fx:id="totalStudentsLabel" text="0"
                            style="-fx-font-size: 32px; -fx-font-weight: bold; -fx-text-fill: #1e3a5f;"/>
                 </VBox>
-                
-                <VBox alignment="CENTER" spacing="8" 
-                      style="-fx-background-color: white; -fx-padding: 20; 
+
+                <VBox alignment="CENTER" spacing="8"
+                      style="-fx-background-color: white; -fx-padding: 20;
                              -fx-background-radius: 8; -fx-pref-width: 180;
                              -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.1), 8, 0, 0, 2);">
-                    <Label text="Active Students" style="-fx-font-size: 12px; -fx-text-fill: #666;"/>
-                    <Label fx:id="activeStudentsLabel" text="0" 
+                    <Label text="Active Students"
+                           style="-fx-font-size: 12px; -fx-text-fill: #666;"/>
+                    <Label fx:id="activeStudentsLabel" text="0"
                            style="-fx-font-size: 32px; -fx-font-weight: bold; -fx-text-fill: #1e3a5f;"/>
                 </VBox>
-                
-                <VBox alignment="CENTER" spacing="8" 
-                      style="-fx-background-color: white; -fx-padding: 20; 
+
+                <VBox alignment="CENTER" spacing="8"
+                      style="-fx-background-color: white; -fx-padding: 20;
                              -fx-background-radius: 8; -fx-pref-width: 180;
                              -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.1), 8, 0, 0, 2);">
-                    <Label text="Days in Month" style="-fx-font-size: 12px; -fx-text-fill: #666;"/>
-                    <Label fx:id="daysInMonthLabel" text="31" 
+                    <Label text="Days in Month"
+                           style="-fx-font-size: 12px; -fx-text-fill: #666;"/>
+                    <Label fx:id="daysInMonthLabel" text="31"
                            style="-fx-font-size: 32px; -fx-font-weight: bold; -fx-text-fill: #1e3a5f;"/>
                 </VBox>
-                
-                <VBox alignment="CENTER" spacing="8" 
-                      style="-fx-background-color: white; -fx-padding: 20; 
+
+                <VBox alignment="CENTER" spacing="8"
+                      style="-fx-background-color: white; -fx-padding: 20;
                              -fx-background-radius: 8; -fx-pref-width: 180;
                              -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.1), 8, 0, 0, 2);">
-                    <Label text="Net Mess Days" style="-fx-font-size: 12px; -fx-text-fill: #666;"/>
-                    <Label fx:id="totalMessDaysLabel" text="0" 
+                    <Label text="Net Mess Days"
+                           style="-fx-font-size: 12px; -fx-text-fill: #666;"/>
+                    <Label fx:id="totalMessDaysLabel" text="0"
                            style="-fx-font-size: 32px; -fx-font-weight: bold; -fx-text-fill: #2e7d32;"/>
                 </VBox>
-                
-                <VBox alignment="CENTER" spacing="8" 
-                      style="-fx-background-color: #1e3a5f; -fx-padding: 20; 
+
+                <VBox alignment="CENTER" spacing="8"
+                      style="-fx-background-color: #1e3a5f; -fx-padding: 20;
                              -fx-background-radius: 8; -fx-pref-width: 220;
                              -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.2), 8, 0, 0, 2);">
-                    <Label text="Current Bill" style="-fx-font-size: 12px; -fx-text-fill: white;"/>
-                    <Label fx:id="estimatedBillLabel" text="₹0.00" 
+                    <Label text="Current Bill"
+                           style="-fx-font-size: 12px; -fx-text-fill: white;"/>
+                    <Label fx:id="estimatedBillLabel" text="₹0.00"
                            style="-fx-font-size: 26px; -fx-font-weight: bold; -fx-text-fill: white;"/>
                 </VBox>
+
             </HBox>
-            
+
             <!-- Students Table -->
-            <VBox style="-fx-background-color: white; -fx-padding: 20; 
+            <VBox style="-fx-background-color: white; -fx-padding: 20;
                          -fx-background-radius: 10;
                          -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.1), 8, 0, 0, 2);">
-                <Label text="Student Attendance Details" 
-                       style="-fx-font-size: 16px; -fx-font-weight: bold; -fx-padding: 0 0 15 0;"/>
-                
-                <TableView fx:id="studentsTable" VBox.vgrow="ALWAYS" 
-                          style="-fx-font-size: 13px;" prefHeight="400">
+
+                <Label text="Student Attendance Details"
+                       style="-fx-font-size: 16px; -fx-font-weight: bold;
+                              -fx-padding: 0 0 15 0;"/>
+
+                <TableView fx:id="studentsTable"
+                           VBox.vgrow="ALWAYS"
+                           style="-fx-font-size: 13px;"
+                           prefHeight="400">
+
                     <columns>
                         <TableColumn fx:id="entryNumberCol" text="Entry Number" prefWidth="150"/>
                         <TableColumn fx:id="nameCol" text="Name" prefWidth="200"/>
@@ -97,10 +130,12 @@
                         <TableColumn fx:id="messDaysCol" text="Mess Days" prefWidth="120"/>
                         <TableColumn fx:id="absentDaysCol" text="Absent Days" prefWidth="120"/>
                     </columns>
+
                 </TableView>
+
             </VBox>
-            
+
         </VBox>
     </center>
-    
+
 </BorderPane>
