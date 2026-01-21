@@ -2,84 +2,142 @@
 <?import javafx.geometry.*?>
 <?import javafx.scene.control.*?>
 <?import javafx.scene.layout.*?>
+<?import javafx.scene.image.*?>
 
-<BorderPane xmlns="http://javafx.com/javafx" xmlns:fx="http://javafx.com/fxml"
+<BorderPane xmlns="http://javafx.com/javafx"
+            xmlns:fx="http://javafx.com/fxml"
             fx:controller="com.smvdu.mess.controllers.DashboardController"
             styleClass="dashboard-bg">
-    
-    <!-- Header -->
+
+    <!-- ===== HEADER ===== -->
     <top>
-        <HBox styleClass="header" alignment="CENTER_LEFT" spacing="20">
-            <padding><Insets top="15" right="30" bottom="15" left="30"/></padding>
-            
-            <VBox>
-                <Label text="🏛️ SMVDU Mess Billing" styleClass="header-title"/>
-                <Label fx:id="hostelLabel" styleClass="header-subtitle"/>
+        <HBox styleClass="app-header"
+              alignment="CENTER_LEFT"
+              spacing="14">
+
+            <padding>
+                <Insets top="10" right="22" bottom="10" left="20"/>
+            </padding>
+
+            <!-- LOGO -->
+            <ImageView fitWidth="52" preserveRatio="true">
+                <image>
+                    <Image url="@/images/smvdu.png"/>
+                </image>
+            </ImageView>
+
+            <!-- TITLES -->
+            <VBox spacing="2">
+                <Label text="Shri Mata Vaishno Devi University"
+                       styleClass="header-title"/>
+                <Label text="Mess Billing System"
+                       styleClass="header-subtitle"/>
             </VBox>
-            
+
             <Region HBox.hgrow="ALWAYS"/>
-            
-            <Label fx:id="welcomeLabel" styleClass="welcome-text"/>
-            <Button text="Logout" onAction="#handleLogout" styleClass="logout-button"/>
+
+            <!-- PAGE CONTROLS (kept exactly as your logic expects) -->
+            <Label fx:id="welcomeLabel"
+                   styleClass="welcome-text"/>
+
+            <Button text="Logout"
+                    onAction="#handleLogout"
+                    styleClass="logout-button"/>
         </HBox>
     </top>
-    
-    <!-- Main Content -->
+
+    <!-- ===== MAIN CONTENT (UNCHANGED LOGIC) ===== -->
     <center>
         <VBox spacing="30" alignment="TOP_CENTER">
-            <padding><Insets top="40" right="40" bottom="40" left="40"/></padding>
-            
+            <padding>
+                <Insets top="40" right="40" bottom="40" left="40"/>
+            </padding>
+
             <!-- Stats Cards -->
             <HBox spacing="25" alignment="CENTER">
-                <VBox styleClass="stat-card" alignment="CENTER" spacing="10" minWidth="200">
+
+                <VBox styleClass="stat-card"
+                      alignment="CENTER" spacing="10"
+                      minWidth="200">
                     <Label text="Total Students" styleClass="stat-label"/>
-                    <Label fx:id="totalStudentsLabel" text="0" styleClass="stat-value"/>
+                    <Label fx:id="totalStudentsLabel"
+                           text="0"
+                           styleClass="stat-value"/>
                 </VBox>
-                
-                <VBox styleClass="stat-card" alignment="CENTER" spacing="10" minWidth="200">
+
+                <VBox styleClass="stat-card"
+                      alignment="CENTER" spacing="10"
+                      minWidth="200">
                     <Label text="Active Students" styleClass="stat-label"/>
-                    <Label fx:id="activeStudentsLabel" text="0" styleClass="stat-value"/>
+                    <Label fx:id="activeStudentsLabel"
+                           text="0"
+                           styleClass="stat-value"/>
                 </VBox>
-                
-                <VBox styleClass="stat-card" alignment="CENTER" spacing="10" minWidth="200">
+
+                <VBox styleClass="stat-card"
+                      alignment="CENTER" spacing="10"
+                      minWidth="200">
                     <Label text="Current Month" styleClass="stat-label"/>
-                    <Label fx:id="currentMonthLabel" text="" styleClass="stat-value-small"/>
+                    <Label fx:id="currentMonthLabel"
+                           styleClass="stat-value-small"/>
                 </VBox>
-                
-                <VBox styleClass="stat-card" alignment="CENTER" spacing="10" minWidth="200">
+
+                <VBox styleClass="stat-card"
+                      alignment="CENTER" spacing="10"
+                      minWidth="200">
                     <Label text="Total Days" styleClass="stat-label"/>
-                    <Label fx:id="totalMessDaysLabel" text="0" styleClass="stat-value"/>
+                    <Label fx:id="totalMessDaysLabel"
+                           text="0"
+                           styleClass="stat-value"/>
                 </VBox>
-                
-                <VBox styleClass="stat-card-highlight" alignment="CENTER" spacing="10" minWidth="220">
+
+                <VBox styleClass="stat-card-highlight"
+                      alignment="CENTER" spacing="10"
+                      minWidth="220">
                     <Label text="Estimated Bill" styleClass="stat-label"/>
-                    <Label fx:id="estimatedBillLabel" text="₹0" styleClass="stat-value-highlight"/>
+                    <Label fx:id="estimatedBillLabel"
+                           text="₹0"
+                           styleClass="stat-value-highlight"/>
                 </VBox>
+
             </HBox>
-            
+
             <!-- Action Buttons -->
             <HBox spacing="30" alignment="CENTER">
-                <VBox styleClass="action-card" alignment="CENTER" spacing="15" 
+
+                <VBox styleClass="action-card"
+                      alignment="CENTER" spacing="15"
                       onMouseClicked="#openBilling">
+
                     <Label text="📄" style="-fx-font-size: 48px;"/>
                     <Label text="Generate Bill" styleClass="action-title"/>
-                    <Label text="Create monthly mess bill" styleClass="action-desc"/>
+                    <Label text="Create monthly mess bill"
+                           styleClass="action-desc"/>
                 </VBox>
-                
-                <VBox styleClass="action-card" alignment="CENTER" spacing="15"
+
+                <VBox styleClass="action-card"
+                      alignment="CENTER" spacing="15"
                       onMouseClicked="#openStudents">
+
                     <Label text="👥" style="-fx-font-size: 48px;"/>
                     <Label text="Student Details" styleClass="action-title"/>
-                    <Label text="View and edit student attendance" styleClass="action-desc"/>
+                    <Label text="View and edit student attendance"
+                           styleClass="action-desc"/>
                 </VBox>
-                
-                <VBox styleClass="action-card" alignment="CENTER" spacing="15"
+
+                <VBox styleClass="action-card"
+                      alignment="CENTER" spacing="15"
                       onMouseClicked="#openImport">
+
                     <Label text="📥" style="-fx-font-size: 48px;"/>
                     <Label text="Import Data" styleClass="action-title"/>
-                    <Label text="Import students from Excel/CSV" styleClass="action-desc"/>
+                    <Label text="Import students from Excel/CSV"
+                           styleClass="action-desc"/>
                 </VBox>
+
             </HBox>
+
         </VBox>
     </center>
+
 </BorderPane>
