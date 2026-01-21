@@ -3,38 +3,81 @@
 <?import javafx.scene.control.*?>
 <?import javafx.scene.control.cell.*?>
 <?import javafx.scene.layout.*?>
+<?import javafx.scene.image.*?>
 
-<BorderPane xmlns="http://javafx.com/javafx" xmlns:fx="http://javafx.com/fxml"
+<BorderPane xmlns="http://javafx.com/javafx"
+            xmlns:fx="http://javafx.com/fxml"
             fx:controller="com.smvdu.mess.controllers.StudentsController"
             styleClass="page-bg">
-    
+
+    <!-- ===== UNIFIED HEADER ===== -->
     <top>
-        <VBox spacing="20">
-            <HBox styleClass="header" alignment="CENTER_LEFT" spacing="20">
-                <padding><Insets top="15" right="30" bottom="15" left="30"/></padding>
-                
-                <Button text="← Back" onAction="#goBack" styleClass="back-button"/>
-                <Label text="Student Details" styleClass="page-title"/>
-                <Label fx:id="hostelLabel" styleClass="header-subtitle"/>
-                
+        <VBox spacing="12">
+
+            <HBox styleClass="app-header"
+                  alignment="CENTER_LEFT"
+                  spacing="14">
+
+                <padding>
+                    <Insets top="10" right="22" bottom="10" left="20"/>
+                </padding>
+
+                <!-- Back -->
+                <Button text="← Back"
+                        onAction="#goBack"
+                        styleClass="back-button"/>
+
+                <!-- Logo -->
+                <ImageView fitWidth="48" preserveRatio="true">
+                    <image>
+                        <Image url="@/images/smvdu.png"/>
+                    </image>
+                </ImageView>
+
+                <!-- Titles -->
+                <VBox spacing="2">
+                    <Label text="Shri Mata Vaishno Devi University"
+                           styleClass="header-title"/>
+                    <Label text="Student Details"
+                           styleClass="header-subtitle"/>
+                </VBox>
+
                 <Region HBox.hgrow="ALWAYS"/>
-                
-                <Label fx:id="totalLabel" styleClass="total-label"/>
+
+                <!-- Existing dynamic labels -->
+                <Label fx:id="hostelLabel"
+                       styleClass="header-subtitle"/>
+
+                <Label fx:id="totalLabel"
+                       styleClass="total-label"/>
             </HBox>
-            
+
+            <!-- Search Bar (unchanged functionality) -->
             <HBox alignment="CENTER" spacing="20">
-                <padding><Insets left="30" right="30"/></padding>
-                <TextField fx:id="searchField" promptText="🔍 Search by name or entry number..." 
-                          styleClass="search-field" prefWidth="400"/>
+                <padding>
+                    <Insets left="30" right="30"/>
+                </padding>
+
+                <TextField fx:id="searchField"
+                           promptText="🔍 Search by name or entry number..."
+                           styleClass="search-field"
+                           prefWidth="400"/>
             </HBox>
+
         </VBox>
     </top>
-    
+
+    <!-- ===== ORIGINAL TABLE KEPT ===== -->
     <center>
         <VBox>
-            <padding><Insets top="20" right="30" bottom="30" left="30"/></padding>
-            
-            <TableView fx:id="studentsTable" styleClass="students-table" VBox.vgrow="ALWAYS">
+            <padding>
+                <Insets top="20" right="30" bottom="30" left="30"/>
+            </padding>
+
+            <TableView fx:id="studentsTable"
+                       styleClass="students-table"
+                       VBox.vgrow="ALWAYS">
+
                 <columns>
                     <TableColumn fx:id="entryNumberCol" text="Entry Number" prefWidth="150"/>
                     <TableColumn fx:id="nameCol" text="Name" prefWidth="200"/>
@@ -43,7 +86,9 @@
                     <TableColumn fx:id="absentDaysCol" text="Absent Days" prefWidth="100"/>
                     <TableColumn fx:id="actionCol" text="Action" prefWidth="100"/>
                 </columns>
+
             </TableView>
         </VBox>
     </center>
+
 </BorderPane>

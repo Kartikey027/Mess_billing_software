@@ -2,25 +2,58 @@
 <?import javafx.geometry.*?>
 <?import javafx.scene.control.*?>
 <?import javafx.scene.layout.*?>
+<?import javafx.scene.image.*?>
 
-<BorderPane xmlns="http://javafx.com/javafx" xmlns:fx="http://javafx.com/fxml"
+<BorderPane xmlns="http://javafx.com/javafx"
+            xmlns:fx="http://javafx.com/fxml"
             fx:controller="com.smvdu.mess.controllers.ImportController"
             styleClass="page-bg">
-    
+
+    <!-- ===== UNIFIED HEADER ===== -->
     <top>
-        <HBox styleClass="header" alignment="CENTER_LEFT" spacing="20">
-            <padding><Insets top="15" right="30" bottom="15" left="30"/></padding>
-            
-            <Button text="← Back" onAction="#goBack" styleClass="back-button"/>
-            <Label text="Import Student Data" styleClass="page-title"/>
-            <Label fx:id="hostelLabel" styleClass="header-subtitle"/>
+        <HBox styleClass="app-header"
+              alignment="CENTER_LEFT"
+              spacing="14">
+
+            <padding>
+                <Insets top="10" right="22" bottom="10" left="20"/>
+            </padding>
+
+            <!-- Back -->
+            <Button text="← Back"
+                    onAction="#goBack"
+                    styleClass="back-button"/>
+
+            <!-- Logo -->
+            <ImageView fitWidth="48" preserveRatio="true">
+                <image>
+                    <Image url="@/images/smvdu.png"/>
+                </image>
+            </ImageView>
+
+            <!-- Titles -->
+            <VBox spacing="2">
+                <Label text="Shri Mata Vaishno Devi University"
+                       styleClass="header-title"/>
+                <Label text="Import Student Data"
+                       styleClass="header-subtitle"/>
+            </VBox>
+
+            <Region HBox.hgrow="ALWAYS"/>
+
+            <!-- Existing dynamic label kept -->
+            <Label fx:id="hostelLabel"
+                   styleClass="header-subtitle"/>
         </HBox>
     </top>
-    
+
+    <!-- ===== ORIGINAL CONTENT KEPT 100% ===== -->
     <center>
         <VBox spacing="30" alignment="TOP_CENTER">
-            <padding><Insets top="40" right="60" bottom="40" left="60"/></padding>
-            
+            <padding>
+                <Insets top="40" right="60" bottom="40" left="60"/>
+            </padding>
+
             <!-- Instructions -->
             <VBox styleClass="info-card" spacing="10">
                 <Label text="📋 Import Instructions" styleClass="section-title"/>
@@ -28,27 +61,43 @@
                 <Label text="• Required columns: entry_number, name" wrapText="true"/>
                 <Label text="• Optional columns: room_number, phone, email" wrapText="true"/>
                 <Label text="• First row should be header row" wrapText="true"/>
-                <Button text="📥 Download Template" onAction="#downloadTemplate" styleClass="link-button"/>
+                <Button text="📥 Download Template"
+                        onAction="#downloadTemplate"
+                        styleClass="link-button"/>
             </VBox>
-            
+
             <!-- File Selection -->
             <HBox spacing="20" alignment="CENTER">
-                <Button text="Select File" onAction="#selectFile" styleClass="secondary-button"/>
-                <Label fx:id="fileLabel" text="No file selected" styleClass="file-label"/>
+                <Button text="Select File"
+                        onAction="#selectFile"
+                        styleClass="secondary-button"/>
+
+                <Label fx:id="fileLabel"
+                       text="No file selected"
+                       styleClass="file-label"/>
             </HBox>
-            
+
             <!-- Progress -->
-            <ProgressBar fx:id="progressBar" prefWidth="500" styleClass="import-progress"/>
-            
+            <ProgressBar fx:id="progressBar"
+                         prefWidth="500"
+                         styleClass="import-progress"/>
+
             <!-- Import Button -->
-            <Button text="🚀 Start Import" onAction="#importData" styleClass="primary-button"/>
-            
+            <Button text="🚀 Start Import"
+                    onAction="#importData"
+                    styleClass="primary-button"/>
+
             <!-- Log Area -->
             <VBox spacing="10" VBox.vgrow="ALWAYS">
                 <Label text="Import Log:" styleClass="log-title"/>
-                <TextArea fx:id="logArea" prefHeight="200" editable="false" 
-                         styleClass="log-area" VBox.vgrow="ALWAYS"/>
+                <TextArea fx:id="logArea"
+                          prefHeight="200"
+                          editable="false"
+                          styleClass="log-area"
+                          VBox.vgrow="ALWAYS"/>
             </VBox>
+
         </VBox>
     </center>
+
 </BorderPane>

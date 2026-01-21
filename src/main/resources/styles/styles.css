@@ -20,81 +20,16 @@
     -fx-white: #ffffff;
 }
 
-/* ---------- Login Page ---------- */
-.login-background {
-    -fx-background-color: linear-gradient(to bottom right, #1a365d, #2c5282);
-}
-
-.login-card {
-    -fx-background-color: #ffffff;
-    -fx-background-radius: 20;
-    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.3), 30, 0, 0, 10);
-}
-
-.title-text {
-    -fx-font-size: 32px;
-    -fx-font-weight: bold;
-    -fx-text-fill: #1a365d;
-}
-
-.subtitle-text {
-    -fx-font-size: 18px;
-    -fx-text-fill: #718096;
-}
-
-.field-label {
-    -fx-font-size: 14px;
-    -fx-font-weight: bold;
-    -fx-text-fill: #4a5568;
-}
-
-.input-field {
-    -fx-padding: 12 15;
-    -fx-font-size: 14px;
-    -fx-background-color: #f7fafc;
-    -fx-background-radius: 8;
-    -fx-border-color: #e2e8f0;
-    -fx-border-radius: 8;
-    -fx-pref-width: 300;
-}
-
-.input-field:focused {
-    -fx-border-color: #3182ce;
-    -fx-effect: dropshadow(gaussian, rgba(49,130,206,0.3), 10, 0, 0, 0);
-}
-
-.primary-button {
-    -fx-background-color: #1a365d;
-    -fx-text-fill: white;
-    -fx-font-size: 16px;
-    -fx-font-weight: bold;
-    -fx-padding: 14 30;
-    -fx-background-radius: 8;
-    -fx-cursor: hand;
-}
-
-.primary-button:hover {
-    -fx-background-color: #2c5282;
-}
-
-.error-label {
-    -fx-text-fill: #e53e3e;
-    -fx-font-size: 13px;
-}
-
-.footer-text {
-    -fx-font-size: 12px;
-    -fx-text-fill: #a0aec0;
-}
-
 /* ---------- Dashboard ---------- */
 .dashboard-bg {
     -fx-background-color: #f7fafc;
 }
 
-.header {
-    -fx-background-color: #ffffff;
-    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.1), 10, 0, 0, 2);
+/* ===== NEW UNIFIED HEADER ===== */
+.app-header {
+    -fx-background-color: white;
+    -fx-border-color: #e5e5e5;
+    -fx-border-width: 0 0 1 0;
 }
 
 .header-title {
@@ -220,16 +155,6 @@
     -fx-text-fill: #1a365d;
 }
 
-/* ---------- Search Field ---------- */
-.search-field {
-    -fx-padding: 12 20;
-    -fx-font-size: 14px;
-    -fx-background-color: #ffffff;
-    -fx-background-radius: 25;
-    -fx-border-color: #e2e8f0;
-    -fx-border-radius: 25;
-}
-
 /* ---------- Table Styles ---------- */
 .students-table {
     -fx-background-color: #ffffff;
@@ -251,24 +176,11 @@
     -fx-background-color: #f7fafc;
 }
 
-.edit-button {
-    -fx-background-color: #3182ce;
-    -fx-text-fill: white;
-    -fx-padding: 5 15;
-    -fx-background-radius: 5;
-    -fx-cursor: hand;
-}
-
-.edit-button:hover {
-    -fx-background-color: #2c5282;
-}
-
 /* ---------- Bill Preview ---------- */
 .settings-panel {
     -fx-background-color: #ffffff;
     -fx-background-radius: 15;
     -fx-padding: 25;
-    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.08), 15, 0, 0, 5);
 }
 
 .section-title {
@@ -280,7 +192,6 @@
 .bill-preview {
     -fx-background-color: #ffffff;
     -fx-background-radius: 15;
-    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.15), 20, 0, 0, 8);
 }
 
 .bill-header {
@@ -295,64 +206,11 @@
     -fx-text-fill: #ffffff;
 }
 
-.bill-hostel {
-    -fx-font-size: 16px;
-    -fx-text-fill: rgba(255,255,255,0.8);
-}
-
-.bill-body {
-    -fx-background-color: #ffffff;
-}
-
-.bill-value {
-    -fx-font-weight: bold;
-    -fx-text-fill: #1a365d;
-}
-
-.total-row {
-    -fx-padding: 15 0;
-}
-
-.total-label {
-    -fx-font-size: 16px;
-    -fx-font-weight: bold;
-}
-
-.total-value {
-    -fx-font-size: 24px;
-    -fx-font-weight: bold;
-    -fx-text-fill: #38a169;
-}
-
-.bill-actions {
-    -fx-background-color: #f7fafc;
-    -fx-background-radius: 0 0 15 15;
-    -fx-padding: 20;
-}
-
-.save-button {
-    -fx-background-color: #38a169;
-    -fx-text-fill: white;
-    -fx-padding: 10 25;
-    -fx-background-radius: 8;
-    -fx-cursor: hand;
-}
-
-.print-button {
-    -fx-background-color: #3182ce;
-    -fx-text-fill: white;
-    -fx-padding: 10 25;
-    -fx-background-radius: 8;
-    -fx-cursor: hand;
-}
-
 /* ---------- Import Page ---------- */
 .info-card {
     -fx-background-color: #ebf8ff;
     -fx-background-radius: 10;
     -fx-padding: 20;
-    -fx-border-color: #90cdf4;
-    -fx-border-radius: 10;
 }
 
 .secondary-button {
@@ -361,36 +219,10 @@
     -fx-padding: 12 25;
     -fx-background-radius: 8;
     -fx-font-weight: bold;
-    -fx-cursor: hand;
-}
-
-.secondary-button:hover {
-    -fx-background-color: #e2e8f0;
 }
 
 .link-button {
     -fx-background-color: transparent;
     -fx-text-fill: #3182ce;
     -fx-underline: true;
-    -fx-cursor: hand;
-}
-
-.file-label {
-    -fx-font-size: 14px;
-    -fx-text-fill: #718096;
-}
-
-.import-progress {
-    -fx-accent: #38a169;
-}
-
-.log-area {
-    -fx-background-color: #1a202c;
-    -fx-text-fill: #68d391;
-    -fx-font-family: "Consolas", monospace;
-    -fx-font-size: 12px;
-}
-
-.thick-separator {
-    -fx-padding: 5 0;
 }
