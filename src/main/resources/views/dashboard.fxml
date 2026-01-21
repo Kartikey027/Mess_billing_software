@@ -30,7 +30,7 @@
             <VBox spacing="2">
                 <Label text="Shri Mata Vaishno Devi University"
                        styleClass="header-title"/>
-                <Label text="Mess Billing System"
+                <Label fx:id="hostelLabel"
                        styleClass="header-subtitle"/>
             </VBox>
 
@@ -140,8 +140,5 @@
         </VBox>
     </center>
 
-<<<<<<< HEAD
+
 </BorderPane>
-=======
-</BorderPane>
->>>>>>> 9be647f1d11855fbb7714af96c1fd80a41cfd51f

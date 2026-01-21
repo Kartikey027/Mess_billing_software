@@ -138,6 +138,108 @@
                 <!-- Rest of your bill layout untouched -->
                 <!-- (all fx:id bindings preserved exactly) -->
 
+
+                <!-- Hostel Info Grid -->
+                <GridPane hgap="15" vgap="5" style="-fx-padding: 8 0;">
+                    <columnConstraints>
+                        <ColumnConstraints percentWidth="50"/>
+                        <ColumnConstraints percentWidth="50"/>
+                    </columnConstraints>
+                    
+                    <Label text="Hostel Code:" style="-fx-font-size: 11px; -fx-font-weight: bold;" GridPane.columnIndex="0" GridPane.rowIndex="0"/>
+                    <Label fx:id="hostelCodeLabel" text="--" style="-fx-font-size: 11px;" GridPane.columnIndex="1" GridPane.rowIndex="0"/>
+                    
+                    <Label text="Billing Period:" style="-fx-font-size: 11px; -fx-font-weight: bold;" GridPane.columnIndex="0" GridPane.rowIndex="1"/>
+                    <Label fx:id="billPeriodLabel" text="--" style="-fx-font-size: 11px;" GridPane.columnIndex="1" GridPane.rowIndex="1"/>
+                    
+                    <Label text="Prepared By:" style="-fx-font-size: 11px; -fx-font-weight: bold;" GridPane.columnIndex="0" GridPane.rowIndex="2"/>
+                    <Label fx:id="preparedByLabel" text="--" style="-fx-font-size: 11px;" GridPane.columnIndex="1" GridPane.rowIndex="2"/>
+                    
+                    <Label text="Generated:" style="-fx-font-size: 11px; -fx-font-weight: bold;" GridPane.columnIndex="0" GridPane.rowIndex="3"/>
+                    <Label fx:id="generatedDateLabel" text="--" style="-fx-font-size: 11px;" GridPane.columnIndex="1" GridPane.rowIndex="3"/>
+                </GridPane>
+                
+                <Separator style="-fx-border-width: 1; -fx-border-color: #ccc;"/>
+                
+                <!-- Bill Details -->
+                <GridPane hgap="15" vgap="8">
+                    <columnConstraints>
+                        <ColumnConstraints percentWidth="60"/>
+                        <ColumnConstraints percentWidth="40" halignment="RIGHT"/>
+                    </columnConstraints>
+                    
+                    <Label text="Days in Billing Period:" GridPane.columnIndex="0" GridPane.rowIndex="0"
+                           style="-fx-font-size: 12px;"/>
+                    <Label fx:id="daysInMonthLabel" text="30" GridPane.columnIndex="1" GridPane.rowIndex="0"
+                           style="-fx-font-size: 12px; -fx-font-weight: bold;"/>
+                    
+                    <Label text="Total Students:" GridPane.columnIndex="0" GridPane.rowIndex="1"
+                           style="-fx-font-size: 12px;"/>
+                    <Label fx:id="totalStudentsLabel" text="0" GridPane.columnIndex="1" GridPane.rowIndex="1"
+                           style="-fx-font-size: 12px; -fx-font-weight: bold;"/>
+                    
+                    <Label text="Total Student-Days:" GridPane.columnIndex="0" GridPane.rowIndex="2"
+                           style="-fx-font-size: 12px;"/>
+                    <Label fx:id="totalStudentDaysLabel" text="0" GridPane.columnIndex="1" GridPane.rowIndex="2"
+                           style="-fx-font-size: 12px; -fx-font-weight: bold;"/>
+                    
+                    <Label text="Total Student Leave Days:" GridPane.columnIndex="0" GridPane.rowIndex="3"
+                           style="-fx-font-size: 12px; -fx-text-fill: #d32f2f;"/>
+                    <Label fx:id="totalAbsentDaysLabel" text="0" GridPane.columnIndex="1" GridPane.rowIndex="3"
+                           style="-fx-font-size: 12px; -fx-font-weight: bold; -fx-text-fill: #d32f2f;"/>
+                    
+                    <Label text="Net Mess Days:" GridPane.columnIndex="0" GridPane.rowIndex="4"
+                           style="-fx-font-size: 12px; -fx-text-fill: #2e7d32;"/>
+                    <Label fx:id="totalMessDaysLabel" text="0" GridPane.columnIndex="1" GridPane.rowIndex="4"
+                           style="-fx-font-size: 12px; -fx-font-weight: bold; -fx-text-fill: #2e7d32;"/>
+                    
+                    <Label text="Per Day Rate:" GridPane.columnIndex="0" GridPane.rowIndex="5"
+                           style="-fx-font-size: 12px;"/>
+                    <Label fx:id="perDayRateLabel" text="₹120.00" GridPane.columnIndex="1" GridPane.rowIndex="5"
+                           style="-fx-font-size: 12px; -fx-font-weight: bold;"/>
+                </GridPane>
+                
+                <Separator prefHeight="1"/>
+                
+                <!-- Financial Summary -->
+                <GridPane hgap="15" vgap="8">
+                    <columnConstraints>
+                        <ColumnConstraints percentWidth="60"/>
+                        <ColumnConstraints percentWidth="40" halignment="RIGHT"/>
+                    </columnConstraints>
+                    
+                    <Label text="Subtotal:" GridPane.columnIndex="0" GridPane.rowIndex="0"
+                           style="-fx-font-size: 14px;"/>
+                    <Label fx:id="subtotalLabel" text="₹0.00" GridPane.columnIndex="1" GridPane.rowIndex="0"
+                           style="-fx-font-size: 14px; -fx-font-weight: bold;"/>
+                    
+                    <HBox GridPane.columnIndex="0" GridPane.rowIndex="1" spacing="8">
+                        <Label text="GST:" style="-fx-font-size: 14px;"/>
+                        <Label fx:id="gstPercentLabel" text="5.0%" style="-fx-font-size: 12px; -fx-text-fill: #666;"/>
+                    </HBox>
+                    <Label fx:id="gstAmountLabel" text="₹0.00" GridPane.columnIndex="1" GridPane.rowIndex="1"
+                           style="-fx-font-size: 14px; -fx-font-weight: bold;"/>
+                </GridPane>
+                
+                <Separator style="-fx-border-width: 2; -fx-border-color: #1e3a5f;"/>
+                
+                <!-- Total Amount -->
+                <HBox alignment="CENTER_RIGHT" spacing="15" style="-fx-padding: 8 0;">
+                    <Label text="TOTAL AMOUNT:" style="-fx-font-size: 18px; -fx-font-weight: bold;"/>
+                    <Label fx:id="totalAmountLabel" text="₹0.00" 
+                           style="-fx-font-size: 20px; -fx-font-weight: bold; -fx-text-fill: #2e7d32;"/>
+                </HBox>
+                
+                <Separator prefHeight="1"/>
+                
+                <!-- Action Buttons - ONLY Export PDF and Print -->
+                <HBox spacing="12" alignment="CENTER" style="-fx-padding: 10 0 5 0;">
+                    <Button text="📄 Export PDF" onAction="#exportToPDF"
+                            style="-fx-background-color: #FF6F00; -fx-text-fill: white; -fx-font-size: 13px; -fx-padding: 10 25; -fx-cursor: hand; -fx-background-radius: 5;"/>
+                    <Button text="🖨 Print" onAction="#printBill"
+                            style="-fx-background-color: #2196F3; -fx-text-fill: white; -fx-font-size: 13px; -fx-padding: 10 25; -fx-cursor: hand; -fx-background-radius: 5;"/>
+                </HBox>
+
             </VBox>
 
         </HBox>
