@@ -1,5 +1,6 @@
 package com.smvdu.mess.database;
 
+import java.io.File;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.PreparedStatement;
@@ -8,21 +9,47 @@ import java.sql.SQLException;
 import java.sql.Statement;
 
 public class DatabaseConnection {
-    
-    private static final String DB_URL = "jdbc:sqlite:mess_billing.db";
+
+    // ===== USER HOME BASED DB PATH (EXE SAFE) =====
+    private static final String DB_FOLDER =
+            System.getProperty("user.home")
+                    + File.separator + "SMVDU-Mess"
+                    + File.separator + "db";
+
+    private static final String DB_PATH =
+            DB_FOLDER + File.separator + "mess_billing.db";
+
+    private static final String DB_URL =
+            "jdbc:sqlite:" + DB_PATH;
+
     private static Connection connection;
-    
+
+    // ===== INITIALIZATION =====
     public static void initialize() {
         try {
+            // Create folder if not exists
+            File folder = new File(DB_FOLDER);
+            if (!folder.exists()) {
+                folder.mkdirs();
+            }
+
+            // Load SQLite driver
+            Class.forName("org.sqlite.JDBC");
+
             connection = DriverManager.getConnection(DB_URL);
             createTables();
             insertDefaultData();
+            migrateDatabase();
+
             System.out.println("Database initialized successfully!");
-        } catch (SQLException e) {
+            System.out.println("DB Path: " + DB_PATH);
+
+        } catch (Exception e) {
             e.printStackTrace();
         }
     }
-    
+
+    // ===== CONNECTION PROVIDER =====
     public static Connection getConnection() {
         try {
             if (connection == null || connection.isClosed()) {
@@ -33,11 +60,52 @@ public class DatabaseConnection {
         }
         return connection;
     }
+
+
+
+
+private static void migrateDatabase() {
+    try (Statement stmt = connection.createStatement()) {
+
+        stmt.execute("""
+            CREATE TABLE IF NOT EXISTS messes (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                name TEXT UNIQUE NOT NULL,
+                code TEXT UNIQUE NOT NULL
+            )
+        """);
+
+        stmt.execute("ALTER TABLE hostels ADD COLUMN mess_id INTEGER");
+
+        stmt.execute("""
+            INSERT OR IGNORE INTO messes (id, name, code) VALUES
+            (1, 'Central Mess', 'CM'),
+            (2, 'Vindhyachal Hostel Mess', 'VHM'),
+            (3, 'Basohli Hostel Mess', 'BHM'),
+            (4, 'Nilgiri Hostel Mess', 'NHM'),
+            (5, 'Shivalik Hostel Mess', 'SHM'),
+            (6, 'Vaishnavi Hostel Mess', 'VNHM')
+        """);
+
+        stmt.execute("UPDATE hostels SET mess_id = 1 WHERE id IN (1,2)");
+        stmt.execute("UPDATE hostels SET mess_id = 2 WHERE id = 3");
+        stmt.execute("UPDATE hostels SET mess_id = 3 WHERE id = 4");
+        stmt.execute("UPDATE hostels SET mess_id = 4 WHERE id = 5");
+        stmt.execute("UPDATE hostels SET mess_id = 5 WHERE id = 6");
+        stmt.execute("UPDATE hostels SET mess_id = 6 WHERE id = 7");
+
+        System.out.println("✓ Database migrated");
+
+    } catch (Exception ignored) {}
+}
+
+
+
+    // ===== TABLE CREATION =====
     
     private static void createTables() throws SQLException {
         Statement stmt = connection.createStatement();
-        
-        // Users table (Caretakers)
+
         stmt.execute("""
             CREATE TABLE IF NOT EXISTS users (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -49,8 +117,11 @@ public class DatabaseConnection {
                 created_at DATETIME DEFAULT CURRENT_TIMESTAMP
             )
         """);
-        
-        // Hostels table
+
+
+
+
+
         stmt.execute("""
             CREATE TABLE IF NOT EXISTS hostels (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -59,8 +130,7 @@ public class DatabaseConnection {
                 mess_name TEXT NOT NULL
             )
         """);
-        
-        // Students table
+
         stmt.execute("""
             CREATE TABLE IF NOT EXISTS students (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -75,8 +145,7 @@ public class DatabaseConnection {
                 FOREIGN KEY (hostel_id) REFERENCES hostels(id)
             )
         """);
-        
-        // Monthly attendance/mess days table
+
         stmt.execute("""
             CREATE TABLE IF NOT EXISTS student_attendance (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -92,8 +161,7 @@ public class DatabaseConnection {
                 UNIQUE(student_id, month, year)
             )
         """);
-        
-        // Bills table
+
         stmt.execute("""
             CREATE TABLE IF NOT EXISTS bills (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -113,8 +181,7 @@ public class DatabaseConnection {
                 FOREIGN KEY (generated_by) REFERENCES users(id)
             )
         """);
-        
-        // Settings table
+
         stmt.execute("""
             CREATE TABLE IF NOT EXISTS settings (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -122,8 +189,7 @@ public class DatabaseConnection {
                 value TEXT NOT NULL
             )
         """);
-        
-        // Admins table
+
         stmt.execute("""
             CREATE TABLE IF NOT EXISTS admins (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -135,17 +201,16 @@ public class DatabaseConnection {
             )
         """);
     }
-    
+
+    // ===== DEFAULT DATA =====
     private static void insertDefaultData() throws SQLException {
         Statement stmt = connection.createStatement();
         ResultSet rs = stmt.executeQuery("SELECT COUNT(*) FROM hostels");
+
         if (rs.next() && rs.getInt(1) > 0) {
-            return; // Data already exists
+            return;
         }
-        
-        // Insert 7 hostels with their mess names
-        // Kailash & Trikuta share "Central Mess"
-        // Others have mess name same as hostel name
+
         String[][] hostels = {
             {"Kailash Hostel", "KH", "Central Mess"},
             {"Trikuta Hostel", "TH", "Central Mess"},
@@ -155,19 +220,18 @@ public class DatabaseConnection {
             {"Shivalik Hostel", "SH", "Shivalik Hostel Mess"},
             {"Vaishnavi Hostel", "VNH", "Vaishnavi Hostel Mess"}
         };
-        
+
         PreparedStatement pstmt = connection.prepareStatement(
-            "INSERT INTO hostels (name, code, mess_name) VALUES (?, ?, ?)"
+                "INSERT INTO hostels (name, code, mess_name) VALUES (?, ?, ?)"
         );
-        
-        for (String[] hostel : hostels) {
-            pstmt.setString(1, hostel[0]);
-            pstmt.setString(2, hostel[1]);
-            pstmt.setString(3, hostel[2]);
+
+        for (String[] h : hostels) {
+            pstmt.setString(1, h[0]);
+            pstmt.setString(2, h[1]);
+            pstmt.setString(3, h[2]);
             pstmt.executeUpdate();
         }
-        
-        // Insert caretakers with correct emails (password: admin123)
+
         String[][] caretakers = {
             {"caretaker.kailashhostel@smvdu.ac.in", "admin123", "Kailash Caretaker", "1"},
             {"caretaker.trikutahostel@smvdu.ac.in", "admin123", "Trikuta Caretaker", "2"},
@@ -177,44 +241,40 @@ public class DatabaseConnection {
             {"caretaker.shivalikhostela@smvdu.ac.in", "admin123", "Shivalik Block A Caretaker", "6"},
             {"caretaker.vaishnavihostel@smvdu.ac.in", "admin123", "Vaishnavi Caretaker", "7"}
         };
-        
+
         pstmt = connection.prepareStatement(
-            "INSERT INTO users (email, password, name, hostel_id, role) VALUES (?, ?, ?, ?, 'caretaker')"
+                "INSERT INTO users (email, password, name, hostel_id, role) VALUES (?, ?, ?, ?, 'caretaker')"
         );
-        
-        for (String[] caretaker : caretakers) {
-            pstmt.setString(1, caretaker[0]);
-            pstmt.setString(2, caretaker[1]);
-            pstmt.setString(3, caretaker[2]);
-            pstmt.setInt(4, Integer.parseInt(caretaker[3]));
+
+        for (String[] c : caretakers) {
+            pstmt.setString(1, c[0]);
+            pstmt.setString(2, c[1]);
+            pstmt.setString(3, c[2]);
+            pstmt.setInt(4, Integer.parseInt(c[3]));
             pstmt.executeUpdate();
         }
-        
-        // Insert admins with correct emails (password: admin123)
+
         String[][] admins = {
             {"vc.pk@smvdu.ac.in", "admin123", "Vice Chancellor", "VC"},
             {"dean.studens@smvdu.ac.in", "admin123", "Dean Student Welfare", "Dean"},
             {"registrar@smvdu.ac.in", "admin123", "Registrar", "Registrar"}
         };
-        
+
         pstmt = connection.prepareStatement(
-            "INSERT INTO admins (email, password, name, designation) VALUES (?, ?, ?, ?)"
+                "INSERT INTO admins (email, password, name, designation) VALUES (?, ?, ?, ?)"
         );
-        
-        for (String[] admin : admins) {
-            pstmt.setString(1, admin[0]);
-            pstmt.setString(2, admin[1]);
-            pstmt.setString(3, admin[2]);
-            pstmt.setString(4, admin[3]);
+
+        for (String[] a : admins) {
+            pstmt.setString(1, a[0]);
+            pstmt.setString(2, a[1]);
+            pstmt.setString(3, a[2]);
+            pstmt.setString(4, a[3]);
             pstmt.executeUpdate();
         }
-        
-        // Insert default settings
+
         stmt.execute("INSERT OR IGNORE INTO settings (key, value) VALUES ('per_day_rate', '120')");
         stmt.execute("INSERT OR IGNORE INTO settings (key, value) VALUES ('gst_percent', '5')");
-        
+
         System.out.println("Default data inserted successfully!");
-        System.out.println("7 Hostels: Kailash, Trikuta (Central Mess), Vindhyachal, Basohli, Nilgiri, Shivalik, Vaishnavi");
-        System.out.println("3 Admins: VC, Dean, Registrar");
     }
 }
