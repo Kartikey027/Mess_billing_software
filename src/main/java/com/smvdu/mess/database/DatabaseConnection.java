@@ -174,6 +174,7 @@ private static void migrateDatabase() {
                 subtotal REAL NOT NULL,
                 gst_percent REAL DEFAULT 5.0,
                 gst_amount REAL NOT NULL,
+                fine_amount REAL DEFAULT 0,
                 total_amount REAL NOT NULL,
                 generated_by INTEGER,
                 generated_at DATETIME DEFAULT CURRENT_TIMESTAMP,

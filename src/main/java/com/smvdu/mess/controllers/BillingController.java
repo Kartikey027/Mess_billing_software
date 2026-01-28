@@ -56,11 +56,14 @@ public class BillingController {
     @FXML private TextField rateField;
     @FXML private TextField gstField;
     @FXML private Button updateRateButton;
+    @FXML private TextField fineField;
+    @FXML private Label fineAmountLabel;
     
     private int hostelId;
     private String hostelCode = "";
     private double perDayRate = 120.0;
     private double gstPercent = 5.0;
+    private double fineAmount = 0;
     
     @FXML
     public void initialize() {
@@ -269,8 +272,15 @@ private void generateBill() {
         
         double subtotal = totalMessDays * perDayRate;
         double gstAmount = subtotal * (gstPercent / 100);
-        double total = subtotal + gstAmount;
-        
+
+        try {
+            fineAmount = fineField.getText().isEmpty() ? 0 : Double.parseDouble(fineField.getText());
+        } catch (Exception e) {
+            fineAmount = 0;
+        }
+
+        double total = subtotal + gstAmount + fineAmount;
+
         daysInMonthLabel.setText(String.valueOf(daysInRange));
         totalStudentsLabel.setText(String.valueOf(activeStudents));
         totalStudentDaysLabel.setText(String.valueOf(totalStudentDays));
@@ -313,6 +323,7 @@ private void generateBill() {
                 double subtotal = Double.parseDouble(subtotalLabel.getText().replace("₹", "").replace(",", ""));
                 double gstAmount = Double.parseDouble(gstAmountLabel.getText().replace("₹", "").replace(",", ""));
                 double totalAmount = Double.parseDouble(totalAmountLabel.getText().replace("₹", "").replace(",", ""));
+                double fineAmount = Double.parseDouble(fineAmountLabel.getText().replace("₹", "").replace(",", ""));
                 
                 BillPDFGenerator.generateBillPDF(
                     file.getAbsolutePath(),
