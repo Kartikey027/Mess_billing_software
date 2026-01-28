@@ -15,11 +15,12 @@ public class Bill {
     private double gstPercent;
     private double gstAmount;
     private double totalAmount;
+    private double fineAmount;
     private LocalDateTime generatedAt;
     
     // Constructor
     public Bill(int hostelId, int month, int year, int totalStudents, 
-                int totalMessDays, double perDayRate, double gstPercent) {
+                int totalMessDays, double perDayRate, double gstPercent, double fineAmount) {
         this.hostelId = hostelId;
         this.month = month;
         this.year = year;
@@ -27,13 +28,14 @@ public class Bill {
         this.totalMessDays = totalMessDays;
         this.perDayRate = perDayRate;
         this.gstPercent = gstPercent;
+        this.fineAmount=fineAmount;
         calculateBill();
     }
     
     private void calculateBill() {
         this.subtotal = totalMessDays * perDayRate;
         this.gstAmount = subtotal * (gstPercent / 100);
-        this.totalAmount = subtotal + gstAmount;
+        this.totalAmount = subtotal + gstAmount+ fineAmount;
     }
     
     // Getters
@@ -49,10 +51,12 @@ public class Bill {
     public double getGstPercent() { return gstPercent; }
     public double getGstAmount() { return gstAmount; }
     public double getTotalAmount() { return totalAmount; }
+    public double getFineAmount() {return fineAmount;}
     public LocalDateTime getGeneratedAt() { return generatedAt; }
     
     // Setters
     public void setId(int id) { this.id = id; }
     public void setHostelName(String hostelName) { this.hostelName = hostelName; }
     public void setGeneratedAt(LocalDateTime generatedAt) { this.generatedAt = generatedAt; }
+    public void setFineAmount(double fineAmount) {this.fineAmount = fineAmount;}
 }

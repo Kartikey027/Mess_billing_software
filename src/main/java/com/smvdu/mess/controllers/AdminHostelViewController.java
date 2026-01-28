@@ -36,6 +36,7 @@ public class AdminHostelViewController {
     @FXML private TableColumn<Student, String> roomCol;
     @FXML private TableColumn<Student, Integer> messDaysCol;
     @FXML private TableColumn<Student, Integer> absentDaysCol;
+    @FXML private Label monthlyFineLabel;
     
     private int messId;
     private ObservableList<Student> studentsList = FXCollections.observableArrayList();
@@ -136,11 +137,38 @@ public class AdminHostelViewController {
         
         // Load students
         loadStudents(hostelIds.toString());
+
+        loadMonthlyFine(hostelIds.toString());
         
     } catch (SQLException e) {
         e.printStackTrace();
     }
 }
+
+    private void loadMonthlyFine(String hostelIds) {
+        LocalDate now = LocalDate.now();
+
+        try {
+            Connection conn = DatabaseConnection.getConnection();
+
+            String query = "SELECT COALESCE(SUM(fine_amount),0) " +
+                    "FROM bills WHERE hostel_id IN (" + hostelIds + ") " +
+                    "AND month = ? AND year = ?";
+
+            PreparedStatement ps = conn.prepareStatement(query);
+            ps.setInt(1, now.getMonthValue());
+            ps.setInt(2, now.getYear());
+
+            ResultSet rs = ps.executeQuery();
+            double fine = rs.next() ? rs.getDouble(1) : 0;
+
+            monthlyFineLabel.setText(String.format("₹%.2f", fine));
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            monthlyFineLabel.setText("₹0.00");
+        }
+    }
 
 private void loadStudents(String hostelIds) {
     studentsList.clear();

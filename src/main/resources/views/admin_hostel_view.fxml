@@ -98,6 +98,16 @@
                 </VBox>
 
                 <VBox alignment="CENTER" spacing="8"
+                      style="-fx-background-color: white; -fx-padding: 20;
+             -fx-background-radius: 8; -fx-pref-width: 180;
+             -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.1), 8, 0, 0, 2);">
+                    <Label text="Monthly Fine"
+                           style="-fx-font-size: 12px; -fx-text-fill: #666;"/>
+                    <Label fx:id="monthlyFineLabel" text="₹0.00"
+                           style="-fx-font-size: 28px; -fx-font-weight: bold; -fx-text-fill: #d32f2f;"/>
+                </VBox>
+
+                <VBox alignment="CENTER" spacing="8"
                       style="-fx-background-color: #1e3a5f; -fx-padding: 20;
                              -fx-background-radius: 8; -fx-pref-width: 220;
                              -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.2), 8, 0, 0, 2);">
