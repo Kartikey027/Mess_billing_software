@@ -120,6 +120,18 @@ private static void migrateDatabase() {
 
 
 
+        stmt.execute("""
+    CREATE TABLE IF NOT EXISTS mess_operation_days (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        mess_id INTEGER NOT NULL,
+        month INTEGER NOT NULL,
+        year INTEGER NOT NULL,
+        operating_days INTEGER NOT NULL,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE (mess_id, month, year)
+    )
+""");
+
 
 
         stmt.execute("""

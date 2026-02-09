@@ -54,6 +54,7 @@ public class Bill {
     public double getFineAmount() {return fineAmount;}
     public LocalDateTime getGeneratedAt() { return generatedAt; }
     
+    
     // Setters
     public void setId(int id) { this.id = id; }
     public void setHostelName(String hostelName) { this.hostelName = hostelName; }

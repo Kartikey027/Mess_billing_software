@@ -215,6 +215,8 @@ private void generateBill() {
     }
     
     int daysInRange = (int) (endDate.toEpochDay() - startDate.toEpochDay() + 1);
+
+    
     
     int selectedMonth = monthCombo.getSelectionModel().getSelectedIndex() + 1;
     int selectedYear = yearCombo.getValue();
@@ -260,6 +262,21 @@ private void generateBill() {
         pstmt.setInt(1, selectedMonth);
         pstmt.setInt(2, selectedYear);
         rs = pstmt.executeQuery();
+
+        // SAVE OPERATING DAYS GLOBALLY FOR THIS MESS
+PreparedStatement saveDays = conn.prepareStatement("""
+    INSERT OR REPLACE INTO mess_operation_days
+    (mess_id, month, year, operating_days)
+    VALUES (?, ?, ?, ?)
+""");
+
+saveDays.setInt(1, messId);
+saveDays.setInt(2, selectedMonth);
+saveDays.setInt(3, selectedYear);
+saveDays.setInt(4, daysInRange);
+
+saveDays.executeUpdate();
+
         
         int totalAbsentDays = 0;
         if (rs.next()) {

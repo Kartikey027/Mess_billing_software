@@ -58,7 +58,9 @@ private void loadHostels() {
         LocalDate now = LocalDate.now();
         int currentMonth = now.getMonthValue();
         int currentYear = now.getYear();
-        int daysInMonth = now.lengthOfMonth();
+        int operatingDays = now.lengthOfMonth();
+
+        
         
         // Get rates from settings
         PreparedStatement pstmt = conn.prepareStatement("SELECT value FROM settings WHERE key = 'per_day_rate'");
@@ -89,6 +91,20 @@ private void loadHostels() {
                 if (hostelIds.length() > 0) hostelIds.append(",");
                 hostelIds.append(hostelRs.getInt("id"));
             }
+            PreparedStatement opStmt = conn.prepareStatement("""
+    SELECT operating_days FROM mess_operation_days
+    WHERE mess_id = ? AND month = ? AND year = ?
+""");
+
+opStmt.setInt(1, messId);
+opStmt.setInt(2, currentMonth);
+opStmt.setInt(3, currentYear);
+
+ResultSet opRs = opStmt.executeQuery();
+if (opRs.next()) {
+    operatingDays = opRs.getInt("operating_days");
+}
+
             
             // Skip if no hostels assigned to this mess
             if (hostelIds.length() == 0) continue;
@@ -113,7 +129,7 @@ private void loadHostels() {
             int totalAbsentDays = absentRs.next() ? absentRs.getInt("total_absent_days") : 0;
             
             // Calculate bill
-            int totalPossibleDays = activeStudents * daysInMonth;
+            int totalPossibleDays = activeStudents * operatingDays;
             int netMessDays = totalPossibleDays - totalAbsentDays;
             if (netMessDays < 0) netMessDays = 0;
             

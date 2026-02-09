@@ -64,7 +64,10 @@ public class DashboardController {
         LocalDate now = LocalDate.now();
         int currentMonth = now.getMonthValue();
         int currentYear = now.getYear();
-        int daysInMonth = now.lengthOfMonth();
+        int operatingDays = now.lengthOfMonth(); // fallback
+
+
+
         
         // Get mess_id for this hostel
         PreparedStatement pstmt = conn.prepareStatement("SELECT mess_id FROM hostels WHERE id = ?");
@@ -82,6 +85,23 @@ public class DashboardController {
             if (hostelIds.length() > 0) hostelIds.append(",");
             hostelIds.append(rs.getInt("id"));
         }
+
+        PreparedStatement opStmt = conn.prepareStatement("""
+    SELECT operating_days FROM mess_operation_days
+    WHERE mess_id = ? AND month = ? AND year = ?
+""");
+
+opStmt.setInt(1, messId);
+opStmt.setInt(2, currentMonth);
+opStmt.setInt(3, currentYear);
+
+ResultSet opRs = opStmt.executeQuery();
+if (opRs.next()) {
+    operatingDays = opRs.getInt("operating_days");
+}
+
+  // Days in month
+totalMessDaysLabel.setText(String.valueOf(operatingDays));
         
         // Total students (from ALL hostels in this mess)
         String query = "SELECT COUNT(*) FROM students WHERE hostel_id IN (" + hostelIds + ")";
@@ -99,8 +119,8 @@ public class DashboardController {
         String monthName = Month.of(currentMonth).getDisplayName(TextStyle.FULL, Locale.ENGLISH);
         currentMonthLabel.setText(monthName + " " + currentYear);
         
-        // Days in month
-        totalMessDaysLabel.setText(String.valueOf(daysInMonth));
+      
+        
         
         // Calculate total absent days for current month (across all hostels in mess)
         String absentQuery = "SELECT COALESCE(SUM(sa.absent_days), 0) as total_absent_days " +
@@ -120,7 +140,8 @@ public class DashboardController {
         }
         
         // Calculate net mess days for billing
-        int totalPossibleDays = activeStudents * daysInMonth;
+        int totalPossibleDays = activeStudents * operatingDays;
+
         int netMessDays = totalPossibleDays - totalAbsentDays;
         if (netMessDays < 0) netMessDays = 0;
         
