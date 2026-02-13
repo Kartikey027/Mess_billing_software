@@ -1,17 +1,23 @@
 package com.smvdu.mess.controllers;
 
+import java.io.File;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Optional;
+import java.util.Set;
 
 import com.smvdu.mess.App;
 import com.smvdu.mess.database.DatabaseConnection;
 import com.smvdu.mess.models.Student;
 import com.smvdu.mess.utils.MessUtils;
 import com.smvdu.mess.utils.SessionManager;
+import com.smvdu.mess.utils.StudentReportPDFGenerator;
 
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
@@ -19,6 +25,7 @@ import javafx.fxml.FXML;
 import javafx.geometry.Insets;
 import javafx.scene.control.Button;
 import javafx.scene.control.ButtonType;
+import javafx.scene.control.ComboBox;
 import javafx.scene.control.Dialog;
 import javafx.scene.control.Label;
 import javafx.scene.control.Spinner;
@@ -28,6 +35,8 @@ import javafx.scene.control.TableView;
 import javafx.scene.control.TextField;
 import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.scene.layout.GridPane;
+import javafx.scene.layout.HBox;
+import javafx.stage.FileChooser;
 
 public class StudentsController {
 
@@ -41,8 +50,12 @@ public class StudentsController {
     @FXML private TextField searchField;
     @FXML private Label hostelLabel;
     @FXML private Label totalLabel;
+    @FXML private ComboBox<String> batchFilterCombo;
+    @FXML private Button printButton;
+    @FXML private HBox filterBox;
 
     private final ObservableList<Student> studentsList = FXCollections.observableArrayList();
+    private final ObservableList<Student> allStudentsList = FXCollections.observableArrayList();
     private int hostelId;
     private int messId;
 
@@ -59,8 +72,9 @@ public class StudentsController {
 
         setupTable();
         loadStudents();
+        setupBatchFilter();
 
-        searchField.textProperty().addListener((obs, o, n) -> filterStudents(n));
+        searchField.textProperty().addListener((obs, o, n) -> filterStudents());
     }
 
     private void setupTable() {
@@ -89,14 +103,13 @@ public class StudentsController {
     }
 
     private void loadStudents() {
+        allStudentsList.clear();
         studentsList.clear();
         LocalDate now = LocalDate.now();
         
-        // Use centralized utility to get operating days
         int operatingDays = MessUtils.getOperatingDays(messId, now.getMonthValue(), now.getYear());
 
         try {
-            // Get all hostel IDs for this mess
             List<Integer> hostelIds = MessUtils.getHostelIdsForMess(messId);
             String hostelIdsStr = MessUtils.hostelIdsToString(hostelIds);
 
@@ -131,9 +144,10 @@ public class StudentsController {
                 );
                 st.setMessDays(rs.getInt("mess_days"));
                 st.setAbsentDays(rs.getInt("absent_days"));
-                studentsList.add(st);
+                allStudentsList.add(st);
             }
 
+            studentsList.setAll(allStudentsList);
             totalLabel.setText("Total: " + studentsList.size() + " students");
 
         } catch (SQLException e) {
@@ -141,10 +155,183 @@ public class StudentsController {
         }
     }
 
+    // ✅ NEW: Setup batch filter dropdown
+    private void setupBatchFilter() {
+        Set<String> batches = new HashSet<>();
+        batches.add("All Batches");
+
+        for (Student student : allStudentsList) {
+            String batch = extractBatch(student.getEntryNumber());
+            if (batch != null) {
+                batches.add(batch);
+            }
+        }
+
+        List<String> sortedBatches = new ArrayList<>(batches);
+        sortedBatches.sort((a, b) -> {
+            if (a.equals("All Batches")) return -1;
+            if (b.equals("All Batches")) return 1;
+            return b.compareTo(a); // Descending order (2025, 2024, 2023...)
+        });
+
+        batchFilterCombo.setItems(FXCollections.observableArrayList(sortedBatches));
+        batchFilterCombo.setValue("All Batches");
+        
+        batchFilterCombo.setOnAction(e -> filterStudents());
+    }
+
+    // ✅ NEW: Extract batch year from entry number
+    private String extractBatch(String entryNumber) {
+        if (entryNumber == null || entryNumber.length() < 2) {
+            return null;
+        }
+
+        try {
+            // Extract first 2 digits (e.g., "23" from "23BCS079")
+            String yearPrefix = entryNumber.substring(0, 2);
+            int year = Integer.parseInt(yearPrefix);
+            
+            // Convert to full year (23 -> 2023, 25 -> 2025)
+            int fullYear = 2000 + year;
+            
+            return String.valueOf(fullYear);
+        } catch (NumberFormatException e) {
+            return null;
+        }
+    }
+
+    // ✅ UPDATED: Filter by both search and batch
+    private void filterStudents() {
+        String searchQuery = searchField.getText();
+        String selectedBatch = batchFilterCombo.getValue();
+
+        ObservableList<Student> filtered = allStudentsList.filtered(student -> {
+            // Batch filter
+            boolean batchMatch = true;
+            if (selectedBatch != null && !selectedBatch.equals("All Batches")) {
+                String studentBatch = extractBatch(student.getEntryNumber());
+                batchMatch = selectedBatch.equals(studentBatch);
+            }
+
+            // Search filter
+            boolean searchMatch = true;
+            if (searchQuery != null && !searchQuery.isEmpty()) {
+                String lowerQuery = searchQuery.toLowerCase();
+                searchMatch = student.getName().toLowerCase().contains(lowerQuery)
+                           || student.getEntryNumber().toLowerCase().contains(lowerQuery);
+            }
+
+            return batchMatch && searchMatch;
+        });
+
+        studentsList.setAll(filtered);
+        totalLabel.setText("Total: " + studentsList.size() + " students");
+    }
+
+    // ✅ NEW: Print button handler
+    @FXML
+    private void handlePrint() {
+        Dialog<String> dialog = new Dialog<>();
+        dialog.setTitle("Print Student Report");
+        dialog.setHeaderText("Select report type");
+
+        // Create buttons
+        ButtonType allStudentsBtn = new ButtonType("All Students");
+        ButtonType absentStudentsBtn = new ButtonType("Absent Students");
+        ButtonType presentStudentsBtn = new ButtonType("Present Students");
+        ButtonType cancelBtn = ButtonType.CANCEL;
+
+        dialog.getDialogPane().getButtonTypes().addAll(
+            allStudentsBtn, absentStudentsBtn, presentStudentsBtn, cancelBtn
+        );
+
+        dialog.setResultConverter(button -> {
+            if (button == allStudentsBtn) return "ALL";
+            if (button == absentStudentsBtn) return "ABSENT";
+            if (button == presentStudentsBtn) return "PRESENT";
+            return null;
+        });
+
+        Optional<String> result = dialog.showAndWait();
+        result.ifPresent(this::generatePDF);
+    }
+
+    // ✅ NEW: Generate PDF based on selection
+    private void generatePDF(String reportType) {
+        try {
+            FileChooser fileChooser = new FileChooser();
+            fileChooser.setTitle("Save Student Report");
+            fileChooser.getExtensionFilters().add(
+                new FileChooser.ExtensionFilter("PDF Files", "*.pdf")
+            );
+
+            String fileName = "Students_" + reportType + "_" + 
+                            LocalDate.now().toString().replace("-", "") + ".pdf";
+            fileChooser.setInitialFileName(fileName);
+
+            File file = fileChooser.showSaveDialog(studentsTable.getScene().getWindow());
+
+            if (file != null) {
+                List<Student> studentsToReport = new ArrayList<>();
+
+                switch (reportType) {
+                    case "ALL":
+                        studentsToReport.addAll(studentsList);
+                        break;
+                    case "ABSENT":
+                        for (Student s : studentsList) {
+                            if (s.getAbsentDays() > 0) {
+                                studentsToReport.add(s);
+                            }
+                        }
+                        break;
+                    case "PRESENT":
+                        for (Student s : studentsList) {
+                            if (s.getAbsentDays() == 0) {
+                                studentsToReport.add(s);
+                            }
+                        }
+                        break;
+                }
+
+                String messName = SessionManager.getCurrentUser().getMessName() != null
+                    ? SessionManager.getCurrentUser().getMessName()
+                    : SessionManager.getCurrentUser().getHostelName();
+
+                LocalDate now = LocalDate.now();
+                int operatingDays = MessUtils.getOperatingDays(messId, now.getMonthValue(), now.getYear());
+
+                StudentReportPDFGenerator.generateStudentReport(
+                    file.getAbsolutePath(),
+                    "SHRI MATA VAISHNO DEVI UNIVERSITY",
+                    messName,
+                    reportType,
+                    studentsToReport,
+                    operatingDays,
+                    now
+                );
+
+                javafx.scene.control.Alert alert = new javafx.scene.control.Alert(
+                    javafx.scene.control.Alert.AlertType.INFORMATION
+                );
+                alert.setTitle("Success");
+                alert.setContentText("Report generated successfully!\nFile: " + file.getName());
+                alert.showAndWait();
+            }
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            javafx.scene.control.Alert alert = new javafx.scene.control.Alert(
+                javafx.scene.control.Alert.AlertType.ERROR
+            );
+            alert.setTitle("Error");
+            alert.setContentText("Failed to generate report: " + e.getMessage());
+            alert.showAndWait();
+        }
+    }
+
     private void showEditDialog(Student student) {
         LocalDate now = LocalDate.now();
-        
-        // Use centralized utility to get operating days
         int operatingDays = MessUtils.getOperatingDays(messId, now.getMonthValue(), now.getYear());
 
         Dialog<ButtonType> dialog = new Dialog<>();
@@ -181,6 +368,7 @@ public class StudentsController {
                     operatingDays
                 );
                 loadStudents();
+                filterStudents();
             }
         });
     }
@@ -213,17 +401,6 @@ public class StudentsController {
         } catch (SQLException e) {
             e.printStackTrace();
         }
-    }
-
-    private void filterStudents(String q) {
-        if (q == null || q.isEmpty()) {
-            studentsTable.setItems(studentsList);
-            return;
-        }
-        studentsTable.setItems(studentsList.filtered(
-            s -> s.getName().toLowerCase().contains(q.toLowerCase())
-                || s.getEntryNumber().toLowerCase().contains(q.toLowerCase())
-        ));
     }
 
     @FXML

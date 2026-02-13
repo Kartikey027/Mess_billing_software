@@ -96,7 +96,12 @@ public class AdminDashboardController {
                 
                 double subtotal = netMessDays * perDayRate;
                 double gst = subtotal * (gstPercent / 100);
-                double totalBill = subtotal + gst;
+                
+                // ✅ FIX: Get fine amount from bill configuration
+                double fineAmount = MessUtils.getFineAmount(messId, currentMonth, currentYear);
+                
+                // ✅ FIX: Include fine in total
+                double totalBill = subtotal + gst + fineAmount;
                 
                 // Create card with calculated bill
                 messCount++;

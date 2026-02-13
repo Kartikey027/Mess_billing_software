@@ -52,6 +52,15 @@
                        styleClass="total-label"/>
             </HBox>
 
+            <!-- Add this near the total label -->
+<HBox spacing="15" alignment="CENTER_RIGHT">
+    <Label fx:id="totalLabel" text="Total: 0 students" style="-fx-font-size: 14px; -fx-font-weight: bold;"/>
+    
+    <!-- ✅ NEW: Print Button -->
+    <Button fx:id="printButton" text="📄 Print Report" onAction="#handlePrint" 
+            styleClass="primary-button"/>
+</HBox>
+
             <!-- Search Bar (unchanged functionality) -->
             <HBox alignment="CENTER" spacing="20">
                 <padding>
@@ -63,6 +72,14 @@
                            styleClass="search-field"
                            prefWidth="400"/>
             </HBox>
+
+            <!-- Add this after the search field -->
+<HBox spacing="10" alignment="CENTER_LEFT" fx:id="filterBox">
+    <TextField fx:id="searchField" promptText="Search by name or entry number..." prefWidth="300"/>
+
+        <Label text="Batch:" style="-fx-font-weight: bold;"/>
+    <ComboBox fx:id="batchFilterCombo" prefWidth="150"/>
+</HBox>
 
         </VBox>
     </top>

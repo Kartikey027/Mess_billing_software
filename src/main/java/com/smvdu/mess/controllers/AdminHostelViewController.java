@@ -102,9 +102,14 @@ public class AdminHostelViewController {
             double perDayRate = MessUtils.getSetting("per_day_rate", 120.0);
             double gstPercent = MessUtils.getSetting("gst_percent", 5.0);
             
+            // ✅ FIX: Get fine amount from bill configuration
+            double fineAmount = MessUtils.getFineAmount(messId, currentMonth, currentYear);
+            
             double subtotal = netMessDays * perDayRate;
             double gst = subtotal * (gstPercent / 100);
-            double total = subtotal + gst;
+            
+            // ✅ FIX: Include fine in total
+            double total = subtotal + gst + fineAmount;
             
             // Update UI
             totalStudentsLabel.setText(String.valueOf(totalStudents));
@@ -113,42 +118,17 @@ public class AdminHostelViewController {
             totalMessDaysLabel.setText(String.valueOf(netMessDays));
             estimatedBillLabel.setText(String.format("₹%.2f", total));
             
+            // ✅ FIX: Display fine amount in the fine label
+            monthlyFineLabel.setText(String.format("₹%.2f", fineAmount));
+            
             // Load students
             loadStudents(hostelIdsStr, operatingDays);
-            
-            // Load monthly fine
-            loadMonthlyFine(hostelIdsStr);
             
         } catch (Exception e) {
             e.printStackTrace();
         }
     }
     
-    private void loadMonthlyFine(String hostelIds) {
-        LocalDate now = LocalDate.now();
-
-        try {
-            Connection conn = DatabaseConnection.getConnection();
-
-            String query = "SELECT COALESCE(SUM(fine_amount),0) " +
-                    "FROM bills WHERE hostel_id IN (" + hostelIds + ") " +
-                    "AND month = ? AND year = ?";
-
-            PreparedStatement ps = conn.prepareStatement(query);
-            ps.setInt(1, now.getMonthValue());
-            ps.setInt(2, now.getYear());
-
-            ResultSet rs = ps.executeQuery();
-            double fine = rs.next() ? rs.getDouble(1) : 0;
-
-            monthlyFineLabel.setText(String.format("₹%.2f", fine));
-
-        } catch (Exception e) {
-            e.printStackTrace();
-            monthlyFineLabel.setText("₹0.00");
-        }
-    }
-
     private void loadStudents(String hostelIds, int operatingDays) {
         studentsList.clear();
         LocalDate now = LocalDate.now();
