@@ -5,10 +5,12 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.time.LocalDate;
+import java.util.List;
 
 import com.smvdu.mess.App;
 import com.smvdu.mess.database.DatabaseConnection;
 import com.smvdu.mess.models.Student;
+import com.smvdu.mess.utils.MessUtils;
 import com.smvdu.mess.utils.SessionManager;
 
 import javafx.collections.FXCollections;
@@ -47,60 +49,19 @@ public class StudentsController {
     @FXML
     public void initialize() {
         hostelId = SessionManager.getCurrentHostelId();
+        messId = MessUtils.getMessIdForHostel(hostelId);
 
         hostelLabel.setText(
-                SessionManager.getCurrentUser().getMessName() != null
-                        ? SessionManager.getCurrentUser().getMessName()
-                        : SessionManager.getCurrentUser().getHostelName()
+            SessionManager.getCurrentUser().getMessName() != null
+                ? SessionManager.getCurrentUser().getMessName()
+                : SessionManager.getCurrentUser().getHostelName()
         );
 
-        resolveMessId();
         setupTable();
         loadStudents();
 
         searchField.textProperty().addListener((obs, o, n) -> filterStudents(n));
     }
-
-    // ===================== CORE LOGIC =====================
-
-    private void resolveMessId() {
-        try {
-            Connection conn = DatabaseConnection.getConnection();
-            PreparedStatement ps = conn.prepareStatement(
-                    "SELECT mess_id FROM hostels WHERE id = ?"
-            );
-            ps.setInt(1, hostelId);
-            ResultSet rs = ps.executeQuery();
-            messId = rs.next() ? rs.getInt(1) : hostelId;
-        } catch (SQLException e) {
-            e.printStackTrace();
-        }
-    }
-
-    private int getOperatingDays() {
-        LocalDate now = LocalDate.now();
-
-        try {
-            Connection conn = DatabaseConnection.getConnection();
-            PreparedStatement ps = conn.prepareStatement(
-                    "SELECT operating_days FROM mess_operation_days " +
-                    "WHERE mess_id = ? AND month = ? AND year = ?"
-            );
-            ps.setInt(1, messId);
-            ps.setInt(2, now.getMonthValue());
-            ps.setInt(3, now.getYear());
-
-            ResultSet rs = ps.executeQuery();
-            if (rs.next()) {
-                return rs.getInt(1);
-            }
-        } catch (SQLException ignored) {}
-
-        // fallback
-        return now.lengthOfMonth();
-    }
-
-    // ===================== TABLE =====================
 
     private void setupTable() {
         entryNumberCol.setCellValueFactory(new PropertyValueFactory<>("entryNumber"));
@@ -130,49 +91,43 @@ public class StudentsController {
     private void loadStudents() {
         studentsList.clear();
         LocalDate now = LocalDate.now();
-        int operatingDays = getOperatingDays();
+        
+        // Use centralized utility to get operating days
+        int operatingDays = MessUtils.getOperatingDays(messId, now.getMonthValue(), now.getYear());
 
         try {
+            // Get all hostel IDs for this mess
+            List<Integer> hostelIds = MessUtils.getHostelIdsForMess(messId);
+            String hostelIdsStr = MessUtils.hostelIdsToString(hostelIds);
+
             Connection conn = DatabaseConnection.getConnection();
-
-            PreparedStatement ps = conn.prepareStatement(
-                    "SELECT id FROM hostels WHERE mess_id = ?"
-            );
-            ps.setInt(1, messId);
-            ResultSet rs = ps.executeQuery();
-
-            StringBuilder hostelIds = new StringBuilder();
-            while (rs.next()) {
-                if (hostelIds.length() > 0) hostelIds.append(",");
-                hostelIds.append(rs.getInt(1));
-            }
-
+            
             String sql =
-                    "SELECT s.*, " +
-                    "COALESCE(sa.mess_days, ?) mess_days, " +
-                    "COALESCE(sa.absent_days, 0) absent_days " +
-                    "FROM students s " +
-                    "LEFT JOIN student_attendance sa ON s.id = sa.student_id " +
-                    "AND sa.month = ? AND sa.year = ? " +
-                    "WHERE s.hostel_id IN (" + hostelIds + ") AND s.is_active = 1 " +
-                    "ORDER BY s.entry_number";
+                "SELECT s.*, " +
+                "COALESCE(sa.mess_days, ?) mess_days, " +
+                "COALESCE(sa.absent_days, 0) absent_days " +
+                "FROM students s " +
+                "LEFT JOIN student_attendance sa ON s.id = sa.student_id " +
+                "AND sa.month = ? AND sa.year = ? " +
+                "WHERE s.hostel_id IN (" + hostelIdsStr + ") AND s.is_active = 1 " +
+                "ORDER BY s.entry_number";
 
-            ps = conn.prepareStatement(sql);
+            PreparedStatement ps = conn.prepareStatement(sql);
             ps.setInt(1, operatingDays);
             ps.setInt(2, now.getMonthValue());
             ps.setInt(3, now.getYear());
 
-            rs = ps.executeQuery();
+            ResultSet rs = ps.executeQuery();
             while (rs.next()) {
                 Student st = new Student(
-                        rs.getInt("id"),
-                        rs.getString("entry_number"),
-                        rs.getString("name"),
-                        rs.getInt("hostel_id"),
-                        rs.getString("room_number"),
-                        rs.getString("phone"),
-                        rs.getString("email"),
-                        rs.getInt("is_active") == 1
+                    rs.getInt("id"),
+                    rs.getString("entry_number"),
+                    rs.getString("name"),
+                    rs.getInt("hostel_id"),
+                    rs.getString("room_number"),
+                    rs.getString("phone"),
+                    rs.getString("email"),
+                    rs.getInt("is_active") == 1
                 );
                 st.setMessDays(rs.getInt("mess_days"));
                 st.setAbsentDays(rs.getInt("absent_days"));
@@ -186,23 +141,24 @@ public class StudentsController {
         }
     }
 
-    // ===================== EDIT =====================
-
     private void showEditDialog(Student student) {
-        int operatingDays = getOperatingDays();
+        LocalDate now = LocalDate.now();
+        
+        // Use centralized utility to get operating days
+        int operatingDays = MessUtils.getOperatingDays(messId, now.getMonthValue(), now.getYear());
 
         Dialog<ButtonType> dialog = new Dialog<>();
         dialog.setTitle("Edit Attendance");
         dialog.setHeaderText(student.getEntryNumber() + " - " + student.getName());
 
         Spinner<Integer> absentSpinner =
-                new Spinner<>(0, operatingDays, student.getAbsentDays());
+            new Spinner<>(0, operatingDays, student.getAbsentDays());
 
         Label messDaysLabel =
-                new Label(String.valueOf(operatingDays - student.getAbsentDays()));
+            new Label(String.valueOf(operatingDays - student.getAbsentDays()));
 
         absentSpinner.valueProperty().addListener((obs, o, n) ->
-                messDaysLabel.setText(String.valueOf(operatingDays - n)));
+            messDaysLabel.setText(String.valueOf(operatingDays - n)));
 
         GridPane grid = new GridPane();
         grid.setPadding(new Insets(20));
@@ -218,33 +174,37 @@ public class StudentsController {
 
         dialog.showAndWait().ifPresent(bt -> {
             if (bt == ButtonType.OK) {
-                updateAttendance(student.getId(),
-                        operatingDays - absentSpinner.getValue(),
-                        absentSpinner.getValue());
+                updateAttendance(
+                    student.getId(),
+                    operatingDays - absentSpinner.getValue(),
+                    absentSpinner.getValue(),
+                    operatingDays
+                );
                 loadStudents();
             }
         });
     }
 
-    private void updateAttendance(int studentId, int messDays, int absentDays) {
+    private void updateAttendance(int studentId, int messDays, int absentDays, int totalDays) {
         LocalDate now = LocalDate.now();
 
         try {
             Connection conn = DatabaseConnection.getConnection();
             PreparedStatement ps = conn.prepareStatement(
-                    "INSERT INTO student_attendance " +
-                    "(student_id, month, year, total_days, mess_days, absent_days) " +
-                    "VALUES (?,?,?,?,?,?) " +
-                    "ON CONFLICT(student_id, month, year) DO UPDATE SET " +
-                    "mess_days = excluded.mess_days, " +
-                    "absent_days = excluded.absent_days, " +
-                    "updated_at = CURRENT_TIMESTAMP"
+                "INSERT INTO student_attendance " +
+                "(student_id, month, year, total_days, mess_days, absent_days) " +
+                "VALUES (?,?,?,?,?,?) " +
+                "ON CONFLICT(student_id, month, year) DO UPDATE SET " +
+                "total_days = excluded.total_days, " +
+                "mess_days = excluded.mess_days, " +
+                "absent_days = excluded.absent_days, " +
+                "updated_at = CURRENT_TIMESTAMP"
             );
 
             ps.setInt(1, studentId);
             ps.setInt(2, now.getMonthValue());
             ps.setInt(3, now.getYear());
-            ps.setInt(4, getOperatingDays());
+            ps.setInt(4, totalDays);
             ps.setInt(5, messDays);
             ps.setInt(6, absentDays);
 
@@ -255,16 +215,14 @@ public class StudentsController {
         }
     }
 
-    // ===================== UTIL =====================
-
     private void filterStudents(String q) {
         if (q == null || q.isEmpty()) {
             studentsTable.setItems(studentsList);
             return;
         }
         studentsTable.setItems(studentsList.filtered(
-                s -> s.getName().toLowerCase().contains(q.toLowerCase())
-                        || s.getEntryNumber().toLowerCase().contains(q.toLowerCase())
+            s -> s.getName().toLowerCase().contains(q.toLowerCase())
+                || s.getEntryNumber().toLowerCase().contains(q.toLowerCase())
         ));
     }
 
@@ -272,12 +230,8 @@ public class StudentsController {
     private void goBack() {
         try {
             App.setRoot("dashboard");
-        } 
-        
-        catch (Exception e) {
+        } catch (Exception e) {
             e.printStackTrace();
         }
-
     }
 }
-

@@ -38,8 +38,8 @@ public class DatabaseConnection {
 
             connection = DriverManager.getConnection(DB_URL);
             createTables();
+            migrateDatabase();  // ✅ Call BEFORE insertDefaultData
             insertDefaultData();
-            migrateDatabase();
 
             System.out.println("Database initialized successfully!");
             System.out.println("DB Path: " + DB_PATH);
@@ -61,48 +61,7 @@ public class DatabaseConnection {
         return connection;
     }
 
-
-
-
-private static void migrateDatabase() {
-    try (Statement stmt = connection.createStatement()) {
-
-        stmt.execute("""
-            CREATE TABLE IF NOT EXISTS messes (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                name TEXT UNIQUE NOT NULL,
-                code TEXT UNIQUE NOT NULL
-            )
-        """);
-
-        stmt.execute("ALTER TABLE hostels ADD COLUMN mess_id INTEGER");
-
-        stmt.execute("""
-            INSERT OR IGNORE INTO messes (id, name, code) VALUES
-            (1, 'Central Mess', 'CM'),
-            (2, 'Vindhyachal Hostel Mess', 'VHM'),
-            (3, 'Basohli Hostel Mess', 'BHM'),
-            (4, 'Nilgiri Hostel Mess', 'NHM'),
-            (5, 'Shivalik Hostel Mess', 'SHM'),
-            (6, 'Vaishnavi Hostel Mess', 'VNHM')
-        """);
-
-        stmt.execute("UPDATE hostels SET mess_id = 1 WHERE id IN (1,2)");
-        stmt.execute("UPDATE hostels SET mess_id = 2 WHERE id = 3");
-        stmt.execute("UPDATE hostels SET mess_id = 3 WHERE id = 4");
-        stmt.execute("UPDATE hostels SET mess_id = 4 WHERE id = 5");
-        stmt.execute("UPDATE hostels SET mess_id = 5 WHERE id = 6");
-        stmt.execute("UPDATE hostels SET mess_id = 6 WHERE id = 7");
-
-        System.out.println("✓ Database migrated");
-
-    } catch (Exception ignored) {}
-}
-
-
-
     // ===== TABLE CREATION =====
-    
     private static void createTables() throws SQLException {
         Statement stmt = connection.createStatement();
 
@@ -117,22 +76,6 @@ private static void migrateDatabase() {
                 created_at DATETIME DEFAULT CURRENT_TIMESTAMP
             )
         """);
-
-
-
-        stmt.execute("""
-    CREATE TABLE IF NOT EXISTS mess_operation_days (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        mess_id INTEGER NOT NULL,
-        month INTEGER NOT NULL,
-        year INTEGER NOT NULL,
-        operating_days INTEGER NOT NULL,
-        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        UNIQUE (mess_id, month, year)
-    )
-""");
-
-
 
         stmt.execute("""
             CREATE TABLE IF NOT EXISTS hostels (
@@ -157,6 +100,23 @@ private static void migrateDatabase() {
                 FOREIGN KEY (hostel_id) REFERENCES hostels(id)
             )
         """);
+
+        // ✅ ADD THIS NEW TABLE
+stmt.execute("""
+    CREATE TABLE IF NOT EXISTS bill_configurations (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        mess_id INTEGER NOT NULL,
+        month INTEGER NOT NULL,
+        year INTEGER NOT NULL,
+        start_date TEXT NOT NULL,
+        end_date TEXT NOT NULL,
+        operating_days INTEGER NOT NULL,
+        fine_amount REAL DEFAULT 0,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE (mess_id, month, year),
+        FOREIGN KEY (mess_id) REFERENCES messes(id)
+    )
+""");
 
         stmt.execute("""
             CREATE TABLE IF NOT EXISTS student_attendance (
@@ -213,6 +173,77 @@ private static void migrateDatabase() {
                 created_at DATETIME DEFAULT CURRENT_TIMESTAMP
             )
         """);
+
+        // ✅ CREATE MESSES TABLE HERE (not in migration)
+        stmt.execute("""
+            CREATE TABLE IF NOT EXISTS messes (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                name TEXT UNIQUE NOT NULL,
+                code TEXT UNIQUE NOT NULL
+            )
+        """);
+
+        // ✅ CREATE MESS_OPERATION_DAYS TABLE
+        stmt.execute("""
+            CREATE TABLE IF NOT EXISTS mess_operation_days (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                mess_id INTEGER NOT NULL,
+                month INTEGER NOT NULL,
+                year INTEGER NOT NULL,
+                operating_days INTEGER NOT NULL,
+                updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                UNIQUE (mess_id, month, year),
+                FOREIGN KEY (mess_id) REFERENCES messes(id)
+            )
+        """);
+    }
+
+    // ===== DATABASE MIGRATION =====
+    private static void migrateDatabase() {
+        try (Statement stmt = connection.createStatement()) {
+
+            // ✅ Check if mess_id column exists before adding
+            ResultSet rs = stmt.executeQuery("PRAGMA table_info(hostels)");
+            boolean messIdExists = false;
+            
+            while (rs.next()) {
+                if ("mess_id".equals(rs.getString("name"))) {
+                    messIdExists = true;
+                    break;
+                }
+            }
+
+            // ✅ Only add column if it doesn't exist
+            if (!messIdExists) {
+                stmt.execute("ALTER TABLE hostels ADD COLUMN mess_id INTEGER");
+                System.out.println("✓ Added mess_id column to hostels table");
+            }
+
+            // ✅ Insert default messes
+            stmt.execute("""
+                INSERT OR IGNORE INTO messes (id, name, code) VALUES
+                (1, 'Central Mess', 'CM'),
+                (2, 'Vindhyachal Hostel Mess', 'VHM'),
+                (3, 'Basohli Hostel Mess', 'BHM'),
+                (4, 'Nilgiri Hostel Mess', 'NHM'),
+                (5, 'Shivalik Hostel Mess', 'SHM'),
+                (6, 'Vaishnavi Hostel Mess', 'VNHM')
+            """);
+
+            // ✅ Update hostels to link with messes (only if not already set)
+            stmt.execute("UPDATE hostels SET mess_id = 1 WHERE id IN (1,2) AND mess_id IS NULL");
+            stmt.execute("UPDATE hostels SET mess_id = 2 WHERE id = 3 AND mess_id IS NULL");
+            stmt.execute("UPDATE hostels SET mess_id = 3 WHERE id = 4 AND mess_id IS NULL");
+            stmt.execute("UPDATE hostels SET mess_id = 4 WHERE id = 5 AND mess_id IS NULL");
+            stmt.execute("UPDATE hostels SET mess_id = 5 WHERE id = 6 AND mess_id IS NULL");
+            stmt.execute("UPDATE hostels SET mess_id = 6 WHERE id = 7 AND mess_id IS NULL");
+
+            System.out.println("✓ Database migration completed");
+
+        } catch (Exception e) {
+            System.err.println("Migration error (non-critical): " + e.getMessage());
+            // Don't throw - migrations can fail if already applied
+        }
     }
 
     // ===== DEFAULT DATA =====
@@ -221,7 +252,7 @@ private static void migrateDatabase() {
         ResultSet rs = stmt.executeQuery("SELECT COUNT(*) FROM hostels");
 
         if (rs.next() && rs.getInt(1) > 0) {
-            return;
+            return; // Data already exists
         }
 
         String[][] hostels = {
@@ -288,6 +319,6 @@ private static void migrateDatabase() {
         stmt.execute("INSERT OR IGNORE INTO settings (key, value) VALUES ('per_day_rate', '120')");
         stmt.execute("INSERT OR IGNORE INTO settings (key, value) VALUES ('gst_percent', '5')");
 
-        System.out.println("Default data inserted successfully!");
+        System.out.println("✓ Default data inserted successfully!");
     }
 }

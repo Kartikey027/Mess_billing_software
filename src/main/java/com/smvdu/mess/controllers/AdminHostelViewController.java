@@ -5,11 +5,13 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.time.LocalDate;
+import java.util.List;
 
 import com.smvdu.mess.App;
 import com.smvdu.mess.database.DatabaseConnection;
 import com.smvdu.mess.models.Student;
 import com.smvdu.mess.utils.AdminSessionManager;
+import com.smvdu.mess.utils.MessUtils;
 
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
@@ -73,78 +75,55 @@ public class AdminHostelViewController {
         studentsTable.setItems(studentsList);
     }
     
-  private void loadData() {
-    LocalDate now = LocalDate.now();
-    int daysInMonth = now.lengthOfMonth();
-    
-    try {
-        Connection conn = DatabaseConnection.getConnection();
+    private void loadData() {
+        LocalDate now = LocalDate.now();
+        int currentMonth = now.getMonthValue();
+        int currentYear = now.getYear();
         
-        // Get all hostel IDs that belong to this mess
-        PreparedStatement pstmt = conn.prepareStatement("SELECT id FROM hostels WHERE mess_id = ?");
-        pstmt.setInt(1, messId);
-        ResultSet rs = pstmt.executeQuery();
-        
-        StringBuilder hostelIds = new StringBuilder();
-        while (rs.next()) {
-            if (hostelIds.length() > 0) hostelIds.append(",");
-            hostelIds.append(rs.getInt("id"));
+        try {
+            // Get operating days using centralized utility
+            int operatingDays = MessUtils.getOperatingDays(messId, currentMonth, currentYear);
+            
+            // Get all hostel IDs for this mess using utility
+            List<Integer> hostelIds = MessUtils.getHostelIdsForMess(messId);
+            String hostelIdsStr = MessUtils.hostelIdsToString(hostelIds);
+            
+            // Get statistics using utilities
+            int totalStudents = MessUtils.getTotalStudentCount(hostelIds);
+            int activeStudents = MessUtils.getActiveStudentCount(hostelIds);
+            int totalAbsentDays = MessUtils.getTotalAbsentDays(hostelIds, currentMonth, currentYear);
+            
+            // Calculate totals
+            int totalPossibleDays = activeStudents * operatingDays;
+            int netMessDays = totalPossibleDays - totalAbsentDays;
+            if (netMessDays < 0) netMessDays = 0;
+            
+            // Get rates using utility
+            double perDayRate = MessUtils.getSetting("per_day_rate", 120.0);
+            double gstPercent = MessUtils.getSetting("gst_percent", 5.0);
+            
+            double subtotal = netMessDays * perDayRate;
+            double gst = subtotal * (gstPercent / 100);
+            double total = subtotal + gst;
+            
+            // Update UI
+            totalStudentsLabel.setText(String.valueOf(totalStudents));
+            activeStudentsLabel.setText(String.valueOf(activeStudents));
+            daysInMonthLabel.setText(String.valueOf(operatingDays));
+            totalMessDaysLabel.setText(String.valueOf(netMessDays));
+            estimatedBillLabel.setText(String.format("₹%.2f", total));
+            
+            // Load students
+            loadStudents(hostelIdsStr, operatingDays);
+            
+            // Load monthly fine
+            loadMonthlyFine(hostelIdsStr);
+            
+        } catch (Exception e) {
+            e.printStackTrace();
         }
-        
-        // Get statistics
-        String query = "SELECT COUNT(*) FROM students WHERE hostel_id IN (" + hostelIds + ")";
-        rs = conn.createStatement().executeQuery(query);
-        int totalStudents = rs.next() ? rs.getInt(1) : 0;
-        totalStudentsLabel.setText(String.valueOf(totalStudents));
-        
-        query = "SELECT COUNT(*) FROM students WHERE hostel_id IN (" + hostelIds + ") AND is_active = 1";
-        rs = conn.createStatement().executeQuery(query);
-        int activeStudents = rs.next() ? rs.getInt(1) : 0;
-        activeStudentsLabel.setText(String.valueOf(activeStudents));
-        
-        daysInMonthLabel.setText(String.valueOf(daysInMonth));
-        
-        // Calculate total mess days
-        String absentQuery = "SELECT COALESCE(SUM(sa.absent_days), 0) as total_absent_days " +
-                           "FROM students s " +
-                           "LEFT JOIN student_attendance sa ON s.id = sa.student_id " +
-                           "AND sa.month = ? AND sa.year = ? " +
-                           "WHERE s.hostel_id IN (" + hostelIds + ") AND s.is_active = 1";
-        
-        pstmt = conn.prepareStatement(absentQuery);
-        pstmt.setInt(1, now.getMonthValue());
-        pstmt.setInt(2, now.getYear());
-        rs = pstmt.executeQuery();
-        
-        int totalAbsentDays = rs.next() ? rs.getInt("total_absent_days") : 0;
-        int totalPossibleDays = activeStudents * daysInMonth;
-        int netMessDays = totalPossibleDays - totalAbsentDays;
-        totalMessDaysLabel.setText(String.valueOf(netMessDays));
-        
-        // Get rate and calculate bill
-        pstmt = conn.prepareStatement("SELECT value FROM settings WHERE key = 'per_day_rate'");
-        rs = pstmt.executeQuery();
-        double perDayRate = rs.next() ? Double.parseDouble(rs.getString("value")) : 120.0;
-        
-        pstmt = conn.prepareStatement("SELECT value FROM settings WHERE key = 'gst_percent'");
-        rs = pstmt.executeQuery();
-        double gstPercent = rs.next() ? Double.parseDouble(rs.getString("value")) : 5.0;
-        
-        double subtotal = netMessDays * perDayRate;
-        double gst = subtotal * (gstPercent / 100);
-        double total = subtotal + gst;
-        estimatedBillLabel.setText(String.format("₹%.2f", total));
-        
-        // Load students
-        loadStudents(hostelIds.toString());
-
-        loadMonthlyFine(hostelIds.toString());
-        
-    } catch (SQLException e) {
-        e.printStackTrace();
     }
-}
-
+    
     private void loadMonthlyFine(String hostelIds) {
         LocalDate now = LocalDate.now();
 
@@ -170,51 +149,49 @@ public class AdminHostelViewController {
         }
     }
 
-private void loadStudents(String hostelIds) {
-    studentsList.clear();
-    LocalDate now = LocalDate.now();
-    int daysInMonth = now.lengthOfMonth();
-    
-    try {
-        Connection conn = DatabaseConnection.getConnection();
+    private void loadStudents(String hostelIds, int operatingDays) {
+        studentsList.clear();
+        LocalDate now = LocalDate.now();
         
-        String studentQuery = "SELECT s.*, " +
-                             "COALESCE(sa.mess_days, ?) as mess_days, " +
-                             "COALESCE(sa.absent_days, 0) as absent_days " +
-                             "FROM students s " +
-                             "LEFT JOIN student_attendance sa ON s.id = sa.student_id " +
-                             "AND sa.month = ? AND sa.year = ? " +
-                             "WHERE s.hostel_id IN (" + hostelIds + ") AND s.is_active = 1 " +
-                             "ORDER BY s.entry_number";
-        
-        PreparedStatement pstmt = conn.prepareStatement(studentQuery);
-        pstmt.setInt(1, daysInMonth);
-        pstmt.setInt(2, now.getMonthValue());
-        pstmt.setInt(3, now.getYear());
-        
-        ResultSet rs = pstmt.executeQuery();
-        
-        while (rs.next()) {
-            Student student = new Student(
-                rs.getInt("id"),
-                rs.getString("entry_number"),
-                rs.getString("name"),
-                rs.getInt("hostel_id"),
-                rs.getString("room_number"),
-                rs.getString("phone"),
-                rs.getString("email"),
-                rs.getInt("is_active") == 1
-            );
-            student.setMessDays(rs.getInt("mess_days"));
-            student.setAbsentDays(rs.getInt("absent_days"));
-            studentsList.add(student);
+        try {
+            Connection conn = DatabaseConnection.getConnection();
+            
+            String studentQuery = "SELECT s.*, " +
+                                 "COALESCE(sa.mess_days, ?) as mess_days, " +
+                                 "COALESCE(sa.absent_days, 0) as absent_days " +
+                                 "FROM students s " +
+                                 "LEFT JOIN student_attendance sa ON s.id = sa.student_id " +
+                                 "AND sa.month = ? AND sa.year = ? " +
+                                 "WHERE s.hostel_id IN (" + hostelIds + ") AND s.is_active = 1 " +
+                                 "ORDER BY s.entry_number";
+            
+            PreparedStatement pstmt = conn.prepareStatement(studentQuery);
+            pstmt.setInt(1, operatingDays);
+            pstmt.setInt(2, now.getMonthValue());
+            pstmt.setInt(3, now.getYear());
+            
+            ResultSet rs = pstmt.executeQuery();
+            
+            while (rs.next()) {
+                Student student = new Student(
+                    rs.getInt("id"),
+                    rs.getString("entry_number"),
+                    rs.getString("name"),
+                    rs.getInt("hostel_id"),
+                    rs.getString("room_number"),
+                    rs.getString("phone"),
+                    rs.getString("email"),
+                    rs.getInt("is_active") == 1
+                );
+                student.setMessDays(rs.getInt("mess_days"));
+                student.setAbsentDays(rs.getInt("absent_days"));
+                studentsList.add(student);
+            }
+            
+        } catch (SQLException e) {
+            e.printStackTrace();
         }
-        
-    } catch (SQLException e) {
-        e.printStackTrace();
     }
-}
-
     
     @FXML
     private void goBack() {

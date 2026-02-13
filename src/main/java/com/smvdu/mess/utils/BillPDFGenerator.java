@@ -37,6 +37,7 @@ public class BillPDFGenerator {
             double gstPercent,
             double gstAmount,
             double totalAmount,
+            double fineAmount,
             String preparedBy,
             LocalDate generatedDate) throws Exception {
         
@@ -136,6 +137,9 @@ public class BillPDFGenerator {
         financialTable.setWidth(UnitValue.createPercentValue(100));
         financialTable.setMarginTop(15);
         financialTable.setMarginBottom(20);
+          if (fineAmount > 0) {
+        addFinancialRow(financialTable, "Fine Amount", "₹" + String.format("%.2f", fineAmount), regularFont);
+    }
         
         addFinancialRow(financialTable, "Subtotal", "₹" + String.format("%.2f", subtotal), regularFont);
         addFinancialRow(financialTable, "GST (" + String.format("%.1f%%", gstPercent) + ")", "₹" + String.format("%.2f", gstAmount), regularFont);

@@ -5,16 +5,17 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.sql.Statement;
 import java.time.LocalDate;
 import java.time.Month;
 import java.time.format.DateTimeFormatter;
 import java.time.format.TextStyle;
+import java.util.List;
 import java.util.Locale;
 
 import com.smvdu.mess.App;
 import com.smvdu.mess.database.DatabaseConnection;
 import com.smvdu.mess.utils.BillPDFGenerator;
+import com.smvdu.mess.utils.MessUtils;
 import com.smvdu.mess.utils.SessionManager;
 
 import javafx.fxml.FXML;
@@ -60,6 +61,7 @@ public class BillingController {
     @FXML private Label fineAmountLabel;
     
     private int hostelId;
+    private int messId;
     private String hostelCode = "";
     private double perDayRate = 120.0;
     private double gstPercent = 5.0;
@@ -68,6 +70,7 @@ public class BillingController {
     @FXML
     public void initialize() {
         hostelId = SessionManager.getCurrentHostelId();
+        messId = MessUtils.getMessIdForHostel(hostelId);
         
         String hostelName = SessionManager.getCurrentUser().getHostelName();
         
@@ -109,8 +112,8 @@ public class BillingController {
         monthCombo.setValue(now.getMonth().getDisplayName(TextStyle.FULL, Locale.ENGLISH));
         yearCombo.setValue(currentYear);
         
-        startDatePicker.setValue(now.withDayOfMonth(1));
-        endDatePicker.setValue(now.withDayOfMonth(now.lengthOfMonth()));
+        // ✅ Load saved configuration or use defaults
+        loadBillConfiguration(now.getMonthValue(), currentYear);
         
         loadSettings();
         rateField.setText(String.valueOf(perDayRate));
@@ -124,33 +127,38 @@ public class BillingController {
         generateBill();
     }
     
+    // ✅ NEW METHOD: Load saved bill configuration
+    private void loadBillConfiguration(int month, int year) {
+        MessUtils.BillConfig config = MessUtils.getBillConfig(messId, month, year);
+        
+        if (config != null) {
+            // Load saved dates
+            startDatePicker.setValue(config.startDate);
+            endDatePicker.setValue(config.endDate);
+            fineField.setText(String.valueOf(config.fineAmount));
+        } else {
+            // Use default dates (full month)
+            LocalDate firstDay = LocalDate.of(year, month, 1);
+            LocalDate lastDay = firstDay.withDayOfMonth(firstDay.lengthOfMonth());
+            startDatePicker.setValue(firstDay);
+            endDatePicker.setValue(lastDay);
+            fineField.setText("0");
+        }
+    }
+    
     private void onMonthYearChange() {
         int selectedMonth = monthCombo.getSelectionModel().getSelectedIndex() + 1;
         int selectedYear = yearCombo.getValue();
         
-        LocalDate firstDay = LocalDate.of(selectedYear, selectedMonth, 1);
-        LocalDate lastDay = firstDay.withDayOfMonth(firstDay.lengthOfMonth());
-        
-        startDatePicker.setValue(firstDay);
-        endDatePicker.setValue(lastDay);
+        // ✅ Load saved configuration for this month/year
+        loadBillConfiguration(selectedMonth, selectedYear);
         
         generateBill();
     }
     
     private void loadSettings() {
-        try {
-            Connection conn = DatabaseConnection.getConnection();
-            Statement stmt = conn.createStatement();
-            
-            ResultSet rs = stmt.executeQuery("SELECT value FROM settings WHERE key = 'per_day_rate'");
-            if (rs.next()) perDayRate = Double.parseDouble(rs.getString("value"));
-            
-            rs = stmt.executeQuery("SELECT value FROM settings WHERE key = 'gst_percent'");
-            if (rs.next()) gstPercent = Double.parseDouble(rs.getString("value"));
-            
-        } catch (SQLException e) {
-            e.printStackTrace();
-        }
+        perDayRate = MessUtils.getSetting("per_day_rate", 120.0);
+        gstPercent = MessUtils.getSetting("gst_percent", 5.0);
     }
     
     @FXML
@@ -164,156 +172,112 @@ public class BillingController {
                 return;
             }
             
-            Connection conn = DatabaseConnection.getConnection();
+            boolean rateUpdated = MessUtils.updateSetting("per_day_rate", String.valueOf(newRate));
+            boolean gstUpdated = MessUtils.updateSetting("gst_percent", String.valueOf(newGST));
             
-            PreparedStatement pstmt = conn.prepareStatement(
-                "UPDATE settings SET value = ? WHERE key = 'per_day_rate'"
-            );
-            pstmt.setString(1, String.valueOf(newRate));
-            pstmt.executeUpdate();
-            
-            pstmt = conn.prepareStatement(
-                "UPDATE settings SET value = ? WHERE key = 'gst_percent'"
-            );
-            pstmt.setString(1, String.valueOf(newGST));
-            pstmt.executeUpdate();
-            
-            perDayRate = newRate;
-            gstPercent = newGST;
-            
-            showAlert("Success", "Rate and GST updated successfully!", Alert.AlertType.INFORMATION);
-            
-            generateBill();
+            if (rateUpdated && gstUpdated) {
+                perDayRate = newRate;
+                gstPercent = newGST;
+                
+                showAlert("Success", "Rate and GST updated successfully!", Alert.AlertType.INFORMATION);
+                generateBill();
+            } else {
+                showAlert("Error", "Failed to update settings", Alert.AlertType.ERROR);
+            }
             
         } catch (NumberFormatException e) {
             showAlert("Error", "Please enter valid numbers for rate and GST", Alert.AlertType.ERROR);
-        } catch (SQLException e) {
-            e.printStackTrace();
-            showAlert("Error", "Failed to update settings", Alert.AlertType.ERROR);
         }
     }
     
-   @FXML
-private void generateBill() {
-    LocalDate startDate = startDatePicker.getValue();
-    LocalDate endDate = endDatePicker.getValue();
-    
-    if (startDate == null || endDate == null) {
-        return;
-    }
-    
-    if (startDate.isAfter(endDate)) {
-        showAlert("Error", "Start date must be before end date", Alert.AlertType.ERROR);
-        return;
-    }
-    
-    try {
-        perDayRate = Double.parseDouble(rateField.getText());
-        gstPercent = Double.parseDouble(gstField.getText());
-    } catch (NumberFormatException e) {
-        return;
-    }
-    
-    int daysInRange = (int) (endDate.toEpochDay() - startDate.toEpochDay() + 1);
-
-    
-    
-    int selectedMonth = monthCombo.getSelectionModel().getSelectedIndex() + 1;
-    int selectedYear = yearCombo.getValue();
-    
-    DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd MMM yyyy");
-    billPeriodLabel.setText(startDate.format(formatter) + " to " + endDate.format(formatter));
-    
-    generatedDateLabel.setText(LocalDate.now().format(DateTimeFormatter.ofPattern("dd MMMM yyyy")));
-    
-    try {
-        Connection conn = DatabaseConnection.getConnection();
+    @FXML
+    private void generateBill() {
+        LocalDate startDate = startDatePicker.getValue();
+        LocalDate endDate = endDatePicker.getValue();
         
-        // Get mess_id for this hostel
-        PreparedStatement pstmt = conn.prepareStatement("SELECT mess_id FROM hostels WHERE id = ?");
-        pstmt.setInt(1, hostelId);
-        ResultSet rs = pstmt.executeQuery();
-        int messId = rs.next() ? rs.getInt("mess_id") : hostelId;
-        
-        // Get all hostel IDs that share this mess
-        pstmt = conn.prepareStatement("SELECT id FROM hostels WHERE mess_id = ?");
-        pstmt.setInt(1, messId);
-        rs = pstmt.executeQuery();
-        
-        StringBuilder hostelIds = new StringBuilder();
-        while (rs.next()) {
-            if (hostelIds.length() > 0) hostelIds.append(",");
-            hostelIds.append(rs.getInt("id"));
+        if (startDate == null || endDate == null) {
+            return;
         }
         
-        // Get active students count from ALL hostels in this mess
-        String query = "SELECT COUNT(*) FROM students WHERE hostel_id IN (" + hostelIds + ") AND is_active = 1";
-        rs = conn.createStatement().executeQuery(query);
-        int activeStudents = rs.next() ? rs.getInt(1) : 0;
-        
-        // Calculate total absent days from ALL hostels in this mess
-        String absentQuery = "SELECT COALESCE(SUM(sa.absent_days), 0) as total_absent_days " +
-                           "FROM students s " +
-                           "LEFT JOIN student_attendance sa ON s.id = sa.student_id " +
-                           "AND sa.month = ? AND sa.year = ? " +
-                           "WHERE s.hostel_id IN (" + hostelIds + ") AND s.is_active = 1";
-        
-        pstmt = conn.prepareStatement(absentQuery);
-        pstmt.setInt(1, selectedMonth);
-        pstmt.setInt(2, selectedYear);
-        rs = pstmt.executeQuery();
-
-        // SAVE OPERATING DAYS GLOBALLY FOR THIS MESS
-PreparedStatement saveDays = conn.prepareStatement("""
-    INSERT OR REPLACE INTO mess_operation_days
-    (mess_id, month, year, operating_days)
-    VALUES (?, ?, ?, ?)
-""");
-
-saveDays.setInt(1, messId);
-saveDays.setInt(2, selectedMonth);
-saveDays.setInt(3, selectedYear);
-saveDays.setInt(4, daysInRange);
-
-saveDays.executeUpdate();
-
-        
-        int totalAbsentDays = 0;
-        if (rs.next()) {
-            totalAbsentDays = rs.getInt("total_absent_days");
+        if (startDate.isAfter(endDate)) {
+            showAlert("Error", "Start date must be before end date", Alert.AlertType.ERROR);
+            return;
         }
         
-        int totalStudentDays = activeStudents * daysInRange;
-        int totalMessDays = totalStudentDays - totalAbsentDays;
-        if (totalMessDays < 0) totalMessDays = 0;
-        
-        double subtotal = totalMessDays * perDayRate;
-        double gstAmount = subtotal * (gstPercent / 100);
-
         try {
-            fineAmount = fineField.getText().isEmpty() ? 0 : Double.parseDouble(fineField.getText());
-        } catch (Exception e) {
-            fineAmount = 0;
+            perDayRate = Double.parseDouble(rateField.getText());
+            gstPercent = Double.parseDouble(gstField.getText());
+        } catch (NumberFormatException e) {
+            return;
         }
-
-        double total = subtotal + gstAmount + fineAmount;
-
-        daysInMonthLabel.setText(String.valueOf(daysInRange));
-        totalStudentsLabel.setText(String.valueOf(activeStudents));
-        totalStudentDaysLabel.setText(String.valueOf(totalStudentDays));
-        totalAbsentDaysLabel.setText(String.valueOf(totalAbsentDays));
-        totalMessDaysLabel.setText(String.valueOf(totalMessDays));
-        perDayRateLabel.setText(String.format("₹%.2f", perDayRate));
-        subtotalLabel.setText(String.format("₹%.2f", subtotal));
-        gstPercentLabel.setText(String.format("%.1f%%", gstPercent));
-        gstAmountLabel.setText(String.format("₹%.2f", gstAmount));
-        totalAmountLabel.setText(String.format("₹%.2f", total));
         
-    } catch (SQLException e) {
-        e.printStackTrace();
+        int daysInRange = (int) (endDate.toEpochDay() - startDate.toEpochDay() + 1);
+        
+        int selectedMonth = monthCombo.getSelectionModel().getSelectedIndex() + 1;
+        int selectedYear = yearCombo.getValue();
+        
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd MMM yyyy");
+        billPeriodLabel.setText(startDate.format(formatter) + " to " + endDate.format(formatter));
+        
+        generatedDateLabel.setText(LocalDate.now().format(DateTimeFormatter.ofPattern("dd MMMM yyyy")));
+        
+        try {
+            // Get all hostel IDs for this mess
+            List<Integer> hostelIds = MessUtils.getHostelIdsForMess(messId);
+            
+            if (hostelIds.isEmpty()) {
+                showAlert("Error", "No hostels found for this mess", Alert.AlertType.ERROR);
+                return;
+            }
+            
+            // Get active students count
+            int activeStudents = MessUtils.getActiveStudentCount(hostelIds);
+            
+            // Get total absent days
+            int totalAbsentDays = MessUtils.getTotalAbsentDays(hostelIds, selectedMonth, selectedYear);
+            
+            // Calculate totals
+            int totalStudentDays = activeStudents * daysInRange;
+            int totalMessDays = totalStudentDays - totalAbsentDays;
+            if (totalMessDays < 0) totalMessDays = 0;
+            
+            double subtotal = totalMessDays * perDayRate;
+            double gstAmount = subtotal * (gstPercent / 100);
+            
+            // Handle fine amount
+            try {
+                String fineText = fineField.getText();
+                fineAmount = (fineText == null || fineText.trim().isEmpty()) 
+                    ? 0 
+                    : Double.parseDouble(fineText.trim());
+            } catch (NumberFormatException e) {
+                fineAmount = 0;
+            }
+            
+            double total = subtotal + gstAmount + fineAmount;
+            
+            // ✅ Save bill configuration (dates, operating days, and fine)
+            MessUtils.saveBillConfig(messId, selectedMonth, selectedYear, 
+                                    startDate, endDate, daysInRange, fineAmount);
+            
+            // Update UI labels
+            daysInMonthLabel.setText(String.valueOf(daysInRange));
+            totalStudentsLabel.setText(String.valueOf(activeStudents));
+            totalStudentDaysLabel.setText(String.valueOf(totalStudentDays));
+            totalAbsentDaysLabel.setText(String.valueOf(totalAbsentDays));
+            totalMessDaysLabel.setText(String.valueOf(totalMessDays));
+            perDayRateLabel.setText(String.format("₹%.2f", perDayRate));
+            subtotalLabel.setText(String.format("₹%.2f", subtotal));
+            gstPercentLabel.setText(String.format("%.1f%%", gstPercent));
+            gstAmountLabel.setText(String.format("₹%.2f", gstAmount));
+            fineAmountLabel.setText(String.format("₹%.2f", fineAmount));
+            totalAmountLabel.setText(String.format("₹%.2f", total));
+            
+        } catch (Exception e) {
+            e.printStackTrace();
+            showAlert("Error", "Failed to generate bill: " + e.getMessage(), Alert.AlertType.ERROR);
+        }
     }
-}
-
     
     @FXML
     private void exportToPDF() {
@@ -337,10 +301,10 @@ saveDays.executeUpdate();
                 int totalStudentDays = Integer.parseInt(totalStudentDaysLabel.getText());
                 int totalAbsentDays = Integer.parseInt(totalAbsentDaysLabel.getText());
                 int totalMessDays = Integer.parseInt(totalMessDaysLabel.getText());
-                double subtotal = Double.parseDouble(subtotalLabel.getText().replace("₹", "").replace(",", ""));
-                double gstAmount = Double.parseDouble(gstAmountLabel.getText().replace("₹", "").replace(",", ""));
-                double totalAmount = Double.parseDouble(totalAmountLabel.getText().replace("₹", "").replace(",", ""));
-                double fineAmount = Double.parseDouble(fineAmountLabel.getText().replace("₹", "").replace(",", ""));
+                double subtotal = Double.parseDouble(subtotalLabel.getText().replace("₹", "").replace(",", "").trim());
+                double gstAmount = Double.parseDouble(gstAmountLabel.getText().replace("₹", "").replace(",", "").trim());
+                double fineAmount = Double.parseDouble(fineAmountLabel.getText().replace("₹", "").replace(",", "").trim());
+                double totalAmount = Double.parseDouble(totalAmountLabel.getText().replace("₹", "").replace(",", "").trim());
                 
                 BillPDFGenerator.generateBillPDF(
                     file.getAbsolutePath(),
@@ -358,6 +322,7 @@ saveDays.executeUpdate();
                     gstPercent,
                     gstAmount,
                     totalAmount,
+                    fineAmount,
                     preparedByLabel.getText(),
                     LocalDate.now()
                 );
@@ -412,6 +377,5 @@ saveDays.executeUpdate();
         } catch (Exception e) {
             e.printStackTrace();
         }
-        
     }
 }

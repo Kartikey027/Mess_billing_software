@@ -1,14 +1,15 @@
 package com.smvdu.mess.controllers;
 
 import java.sql.Connection;
-import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.time.LocalDate;
+import java.util.List;
 
 import com.smvdu.mess.App;
 import com.smvdu.mess.database.DatabaseConnection;
 import com.smvdu.mess.utils.AdminSessionManager;
+import com.smvdu.mess.utils.MessUtils;
 
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
@@ -48,117 +49,75 @@ public class AdminDashboardController {
         loadHostels();
     }
     
-private void loadHostels() {
-    System.out.println("Loading messes...");
-    hostelsContainer.getChildren().clear();
-    
-    try {
-        Connection conn = DatabaseConnection.getConnection();
+    private void loadHostels() {
+        System.out.println("Loading messes...");
+        hostelsContainer.getChildren().clear();
         
-        LocalDate now = LocalDate.now();
-        int currentMonth = now.getMonthValue();
-        int currentYear = now.getYear();
-        int operatingDays = now.lengthOfMonth();
-
-        
-        
-        // Get rates from settings
-        PreparedStatement pstmt = conn.prepareStatement("SELECT value FROM settings WHERE key = 'per_day_rate'");
-        ResultSet rs = pstmt.executeQuery();
-        double perDayRate = rs.next() ? Double.parseDouble(rs.getString("value")) : 120.0;
-        
-        pstmt = conn.prepareStatement("SELECT value FROM settings WHERE key = 'gst_percent'");
-        rs = pstmt.executeQuery();
-        double gstPercent = rs.next() ? Double.parseDouble(rs.getString("value")) : 5.0;
-        
-        // Get all messes
-        String messQuery = "SELECT id, name, code FROM messes ORDER BY name";
-        rs = conn.createStatement().executeQuery(messQuery);
-        
-        int messCount = 0;
-        while (rs.next()) {
-            int messId = rs.getInt("id");
-            String messName = rs.getString("name");
-            String messCode = rs.getString("code");
+        try {
+            Connection conn = DatabaseConnection.getConnection();
             
-            // Get all hostel IDs for this mess
-            pstmt = conn.prepareStatement("SELECT id FROM hostels WHERE mess_id = ?");
-            pstmt.setInt(1, messId);
-            ResultSet hostelRs = pstmt.executeQuery();
+            LocalDate now = LocalDate.now();
+            int currentMonth = now.getMonthValue();
+            int currentYear = now.getYear();
             
-            StringBuilder hostelIds = new StringBuilder();
-            while (hostelRs.next()) {
-                if (hostelIds.length() > 0) hostelIds.append(",");
-                hostelIds.append(hostelRs.getInt("id"));
+            // Get rates from settings using utility
+            double perDayRate = MessUtils.getSetting("per_day_rate", 120.0);
+            double gstPercent = MessUtils.getSetting("gst_percent", 5.0);
+            
+            // Get all messes
+            String messQuery = "SELECT id, name, code FROM messes ORDER BY name";
+            ResultSet rs = conn.createStatement().executeQuery(messQuery);
+            
+            int messCount = 0;
+            while (rs.next()) {
+                int messId = rs.getInt("id");
+                String messName = rs.getString("name");
+                String messCode = rs.getString("code");
+                
+                // Get all hostel IDs for this mess using utility
+                List<Integer> hostelIds = MessUtils.getHostelIdsForMess(messId);
+                
+                // Skip if no hostels assigned to this mess
+                if (hostelIds.isEmpty()) continue;
+                
+                // Get operating days using centralized utility
+                int operatingDays = MessUtils.getOperatingDays(messId, currentMonth, currentYear);
+                
+                // Count active students using utility
+                int activeStudents = MessUtils.getActiveStudentCount(hostelIds);
+                
+                // Calculate total absent days using utility
+                int totalAbsentDays = MessUtils.getTotalAbsentDays(hostelIds, currentMonth, currentYear);
+                
+                // Calculate bill
+                int totalPossibleDays = activeStudents * operatingDays;
+                int netMessDays = totalPossibleDays - totalAbsentDays;
+                if (netMessDays < 0) netMessDays = 0;
+                
+                double subtotal = netMessDays * perDayRate;
+                double gst = subtotal * (gstPercent / 100);
+                double totalBill = subtotal + gst;
+                
+                // Create card with calculated bill
+                messCount++;
+                VBox messCard = createMessCard(messId, messName, messCode, activeStudents, totalBill);
+                hostelsContainer.getChildren().add(messCard);
             }
-            PreparedStatement opStmt = conn.prepareStatement("""
-    SELECT operating_days FROM mess_operation_days
-    WHERE mess_id = ? AND month = ? AND year = ?
-""");
-
-opStmt.setInt(1, messId);
-opStmt.setInt(2, currentMonth);
-opStmt.setInt(3, currentYear);
-
-ResultSet opRs = opStmt.executeQuery();
-if (opRs.next()) {
-    operatingDays = opRs.getInt("operating_days");
-}
-
             
-            // Skip if no hostels assigned to this mess
-            if (hostelIds.length() == 0) continue;
+            System.out.println("Loaded " + messCount + " messes");
             
-            // Count active students
-            String studentQuery = "SELECT COUNT(*) FROM students WHERE hostel_id IN (" + hostelIds + ") AND is_active = 1";
-            ResultSet studentRs = conn.createStatement().executeQuery(studentQuery);
-            int activeStudents = studentRs.next() ? studentRs.getInt(1) : 0;
+            if (messCount == 0) {
+                Label noDataLabel = new Label("No messes found in database");
+                noDataLabel.setStyle("-fx-font-size: 16px; -fx-text-fill: #999;");
+                hostelsContainer.getChildren().add(noDataLabel);
+            }
             
-            // Calculate total absent days
-            String absentQuery = "SELECT COALESCE(SUM(sa.absent_days), 0) as total_absent_days " +
-                               "FROM students s " +
-                               "LEFT JOIN student_attendance sa ON s.id = sa.student_id " +
-                               "AND sa.month = ? AND sa.year = ? " +
-                               "WHERE s.hostel_id IN (" + hostelIds + ") AND s.is_active = 1";
-            
-            pstmt = conn.prepareStatement(absentQuery);
-            pstmt.setInt(1, currentMonth);
-            pstmt.setInt(2, currentYear);
-            ResultSet absentRs = pstmt.executeQuery();
-            
-            int totalAbsentDays = absentRs.next() ? absentRs.getInt("total_absent_days") : 0;
-            
-            // Calculate bill
-            int totalPossibleDays = activeStudents * operatingDays;
-            int netMessDays = totalPossibleDays - totalAbsentDays;
-            if (netMessDays < 0) netMessDays = 0;
-            
-            double subtotal = netMessDays * perDayRate;
-            double gst = subtotal * (gstPercent / 100);
-            double totalBill = subtotal + gst;
-            
-            // Create card with calculated bill
-            messCount++;
-            VBox messCard = createMessCard(messId, messName, messCode, activeStudents, totalBill);
-            hostelsContainer.getChildren().add(messCard);
+        } catch (SQLException e) {
+            e.printStackTrace();
+            System.err.println("SQL Error: " + e.getMessage());
+            showAlert("Error", "Failed to load messes: " + e.getMessage(), Alert.AlertType.ERROR);
         }
-        
-        System.out.println("Loaded " + messCount + " messes");
-        
-        if (messCount == 0) {
-            Label noDataLabel = new Label("No messes found in database");
-            noDataLabel.setStyle("-fx-font-size: 16px; -fx-text-fill: #999;");
-            hostelsContainer.getChildren().add(noDataLabel);
-        }
-        
-    } catch (SQLException e) {
-        e.printStackTrace();
-        System.err.println("SQL Error: " + e.getMessage());
-        showAlert("Error", "Failed to load messes: " + e.getMessage(), Alert.AlertType.ERROR);
     }
-}
-
-
     
     private VBox createMessCard(int messId, String messName, String code, 
                                 int students, double billAmount) {
